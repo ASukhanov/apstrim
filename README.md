@@ -1,5 +1,5 @@
 # apstrim
-Application for logging Control System parameters and data objects to file. Analog of SDDS writer.
+Logger of Control System parameters and data objects. Analog of SDDS writer.
 
 - Supported infrastructures: ADO, EPICS, LITE.
 - Efficient binary serialization format.
