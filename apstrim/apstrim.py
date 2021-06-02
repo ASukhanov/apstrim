@@ -145,7 +145,7 @@ class apstrim ():
                 periodic_update = timestamp
                 #print(f'Written {stat[0]-prev[0]} paragraphs, {stat[1]-prev[1]} bytes')
                 #prev = copy.copy(stat)
-                print(f'Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
+                print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
         except Exception as e:
             print(f'ERROR: Exception in serialize_section: {e}')
         print(f'Logging finished after {stat[0]} paragraphs')
