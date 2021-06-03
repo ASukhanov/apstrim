@@ -16,7 +16,7 @@ def main():
     #'Configuration file')
     parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
     'File for storing PVs and data objects')
-    parser.add_argument('-n', '--namespace', default='ADO', help=\
+    parser.add_argument('-n', '--namespace', default='EPICS', help=\
     'Infrastructure namespace, e.g.: EPICS, ADO or LITE')
     parser.add_argument('pvNames', nargs='*') 
     pargs = parser.parse_args()

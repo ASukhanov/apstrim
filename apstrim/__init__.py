@@ -6,3 +6,4 @@
 #
 #     https://github.com/ASukhanov/upstrim/blob/main/LICENSE
 #
+__version__ = "1.0.3"

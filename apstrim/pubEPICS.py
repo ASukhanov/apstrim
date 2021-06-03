@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/ASukhanov/upstrim/blob/main/LICENSE
+#     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
 
 """Basic EPICS access API using caproto: a pure-Python Channel Access protocol library

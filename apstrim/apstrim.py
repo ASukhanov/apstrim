@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = 'v03 2021-06-01'# EPICS and LITE support is OK, Compression supported
+__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
 
 import sys, time, string, copy
 import threading
