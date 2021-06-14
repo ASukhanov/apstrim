@@ -7,7 +7,14 @@ Logger of Control System parameters and data objects. Analog of SDDS writer.
 - Numpy arrays supported.
 - Optional online compression.
 
+## Installation
+Dependencies: **msgpack, msgpack-numpy, caproto**. All required packages can be installed using pip:
+
+    pip3 install apstrim
+
 ## Examples
+
+Serialization
 
     :python -m apstrim -nEPICS -oMeanValue.aps testAPD:scope1:MeanValue_RBV
     21-06-02 13:10:43 Logged 61 paragraphs, 1.36 KBytes
@@ -25,10 +32,12 @@ Logger of Control System parameters and data objects. Analog of SDDS writer.
     21-06-02 13:40:41 Logged 5767 paragraphs, 54.456 KBytes
     ...
 
-    :python -m apstrim -nLITE liteHost:dev1:cycle liteHost:dev1:y
+    :python -m apstrim -nLITE liteHost:dev1:cycle,y
     pars: {'acnlin23:dev1:cycle': ['0'], 'acnlin23:dev1:y': ['1']}
     21-06-02 13:50:14 Logged 5763 paragraphs, 46448.658 KBytes
     ...
 
 
+Example of deserialization and plotting of the logged data.
 
+    python -m apstrim.deserializer /export/users/log/*.aps
