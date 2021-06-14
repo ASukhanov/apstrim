@@ -1,14 +1,14 @@
-"""Test of an upstrim-generated file: deserialze and plot all its items"""
+"""Test of an upstrim-generated file: deserialze and plotItem all its items"""
 import sys, time, argparse
 from timeit import default_timer as timer
+from functools import partial
 import numpy as np
 import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
 import pyqtgraph as pg
 
-#__version__ = 'v04 2021-06-03'# DateTime axis
-__version__ = 'v05 2021-06-13'# Unix style pathname pattern expansion, improved plotting
+__version__ = 'v06 2021-06-14'# improved plotting: cursors, legends.
 
 #````````````````````````````Helper methods```````````````````````````````````
 def decompress(arg):
@@ -17,7 +17,7 @@ def decompress(arg):
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 #````````````````````````````Deserialize files````````````````````````````````
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('-k', '--keys', help=('Items to plot. '
+parser.add_argument('-k', '--keys', help=('Items to plotItem. '
 'String of 1-letter keys of the parameter map e.g. 1357'))
 parser.add_argument('files', nargs='*', default='apstrim.aps', help=\
 'Input files, Unix style pathname pattern expansion allowed e.g: pi0_2021*.aps')
@@ -81,7 +81,7 @@ for file in pargs.files:
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,    
 #```````````````````````````` Plot objects````````````````````````````````````
 class DateAxis(pg.AxisItem):
-    """Time scale for plot"""
+    """Time scale for plotItem"""
     def tickStrings(self, values, scale, spacing):
         strns = []
         if len(values) == 0: 
@@ -104,14 +104,18 @@ class DateAxis(pg.AxisItem):
                 strns.append('')
         return strns
 
+
 win = pg.GraphicsLayoutWidget(show=True)#, title="Basic plotting examples")
 win.resize(800,600)
 s = pargs.files[0] if len(pargs.files)==1 else pargs.files[0]+'...'
 win.setWindowTitle(f'Graphs[{len(plotData)}] of {s}')
 
-plot = win.addPlot(#title="apstrim plot",
+plotItem = win.addPlot(#title="apstrim plotItem",
     axisItems={'bottom':DateAxis(orientation='bottom')})
-plot.getViewBox().setMouseMode(pg.ViewBox.RectMode)
+legend = pg.LegendItem((80,60), offset=(70,20))
+legend.setParentItem(plotItem)
+viewBox = plotItem.getViewBox()
+viewBox.setMouseMode(pg.ViewBox.RectMode)
 
 idx = 0
 ts = timer()
@@ -123,9 +127,44 @@ for par,xy in plotData.items():
     a = a[:, a[0, :].argsort()]
     pen = (idx,len(plotData))
     try:
-        plot.plot(a[0], a[1], pen=pen# plotting only lines is 10 times faster
+        p = plotItem.plot(a[0], a[1], pen=pen# plotting only lines is 10 times faster
         ,symbol='+', symbolSize=2, symbolPen=pen)# comment this line if slow
+        legend.addItem(p, par)
     except Exception as e:
         print(f'WARNING: plotting is not supported for item {par}: {e}')
 print(f'plotting time: {round(timer()-ts,3)}')
+
+cursors = set()
+def add_cursor(direction):
+    global cursor
+    angle = {'Vertical':90, 'Horizontal':0}[direction]
+    vid = {'Vertical':0, 'Horizontal':1}[direction]
+    viewRange = plotItem.viewRange()
+    pos = (viewRange[vid][1] + viewRange[vid][0])/2.
+    pen = pg.mkPen(color='y', width=1, style=pg.QtCore.Qt.DotLine)
+    cursor = pg.InfiniteLine(pos=pos, pen=pen, movable=True, angle=angle
+    , label=str(round(pos,3)))
+    cursor.sigPositionChangeFinished.connect(\
+    (partial(cursorPositionChanged,cursor)))
+    cursors.add(cursor)
+    plotItem.addItem(cursor)
+    cursorPositionChanged(cursor)
+
+def cursorPositionChanged(cursor):
+    pos = cursor.value()
+    horizontal = cursor.angle == 0.
+    viewRange = plotItem.viewRange()[horizontal]
+    if pos > viewRange[1]:
+        plotItem.removeItem(cursor)
+        cursors.remove(cursor)
+    else:
+        if horizontal:
+            text = str(round(pos,3))
+        else:
+            text = time.strftime('%H:%M:%S', time.localtime(pos))
+        cursor.label.setText(text)
+
+add_cursor('Vertical')
+add_cursor('Horizontal')
+
 pg.mkQApp().exec_()

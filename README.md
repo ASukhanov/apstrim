@@ -6,9 +6,10 @@ Logger of Control System parameters and data objects. Analog of SDDS writer.
 - Like JSON. But it's faster and smaller.
 - Numpy arrays supported.
 - Optional online compression.
+- Basic plotting of logged data.
 
 ## Installation
-Dependencies: **msgpack, msgpack-numpy, caproto**. All required packages can be installed using pip:
+Dependencies: **msgpack, msgpack-numpy, caproto, pyqtgraph**. All required packages will be installed using pip:
 
     pip3 install apstrim
 
@@ -38,6 +39,6 @@ Serialization
     ...
 
 
-Example of deserialization and plotting of the logged data.
+Example of deserialization and plotting of the logged data files.
 
-    python -m apstrim.deserializer /export/users/log/*.aps
+    python -m apstrim.deserializer *.aps
