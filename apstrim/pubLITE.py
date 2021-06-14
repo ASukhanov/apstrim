@@ -82,7 +82,9 @@ LA.PVs([[['Scaler1','dev1'],'*']]).read()
 To enable debugging: LA.PVs.Dbg = True
 To enable transaction timing: LA.Channel.Perf = True  
 """
-__version__ = 'v64 2021-05-04'# raising exceptions instead of returning error code.
+#__version__ = 'v64 2021-05-04'# raising exceptions instead of returning error code.
+__version__ = 'v65 2021-06-10'# subscription sockets are blocking now
+
 
 print('liteAccess '+__version__)
 
@@ -107,7 +109,7 @@ NSDelimiter = ':'# delimiter in the name field
 Username = getpass.getuser()
 Program = sys.argv[0]
 PID = getpid()
-print(f'liteAcces user:{Username}, PID:{PID}, program:{Program}')
+#print(f'liteAccess user:{Username}, PID:{PID}, program:{Program}')
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 #````````````````````````````Helper functions`````````````````````````````````
 MaxPrint = 500
@@ -408,7 +410,7 @@ class SubscriptionSocket():
         dispatchMode = 'Thread'
         if dispatchMode == 'Thread':
             self.selector = None
-            self.socket.settimeout(10)
+            #self.socket.settimeout(10)
             #self.thread = thread_with_exception(target=self.receivingThread, args=[])
             self.thread = threading.Thread(target=self.receivingThread)
             self.thread.daemon = True
