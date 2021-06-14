@@ -6,9 +6,12 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
+#__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
+#__version__ = '1.0.4a 2021-06-11'# flush the file after each section
+__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
 
 import sys, time, string, copy
+import os, pathlib, datetime
 import threading
 import signal
 
@@ -23,9 +26,9 @@ SecDateTime, SecParagraph = 0,1
 
 #````````````````````````````Helper functions`````````````````````````````````
 def printTime(): return time.strftime("%m%d:%H%M%S")
-def printi(msg): print(f'US_INFO@{printTime()}: {msg}')
-def printw(msg): print(f'US_WARNING@{printTime()}: {msg}')
-def printe(msg): print(f'US_ERROR@{printTime()}: {msg}')
+def printi(msg): print(f'INFO_AS@{printTime()}: {msg}')
+def printw(msg): print(f'WARN_AS@{printTime()}: {msg}')
+def printe(msg): print(f'ERROR_AS@{printTime()}: {msg}')
 
 def croppedText(txt, limit=200):
     if len(txt) > limit:
@@ -57,13 +60,29 @@ class apstrim ():
             self.compress = None
             v['compression'] = 'None'
         self.lock = threading.Lock()
+
+        # if file exist then rename the existing file
+        try:
+            modificationTime = pathlib.Path(fileName).stat().st_mtime
+            dt = datetime.datetime.fromtimestamp(modificationTime)
+            suffix = dt.strftime('_%Y%m%d_%H%M') 
+            try:    fname,ext = fileName.rsplit('.',1)
+            except:    fname,ext = fileName,''
+            otherName = fname + suffix + '.' + ext
+            os.rename(fileName, otherName)
+            printw(f'Existing file {fileName} have been renamed to {otherName}')
+        except Exception as e:
+            pass
+
         self.logbook = open(fileName, 'wb')
         self.publisher = namespace
         self.logbook.write(msgpack.packb(v))
+        printi(f'Logbook file: {fileName} created')
+
         #self.sectionNumber = 0# for testing
         self.create_logSection()
 
-        print('starting periodic thread')
+        printi('starting periodic thread')
         myThread = threading.Thread(target=self.serialize_section)
         myThread.start()
 
@@ -119,7 +138,7 @@ class apstrim ():
         self.logSection = (key, self.logParagraph)
 
     def serialize_section(self):
-        print('serialize_section started')
+        printi('serialize_section started')
         periodic_update = time.time()
         stat = [0, 0]
         #prev = [0, 0]
@@ -135,6 +154,7 @@ class apstrim ():
                 compressed = self.compress(packed)
                 packed = msgpack.packb(compressed)
             self.logbook.write(packed)
+            self.logbook.flush()
 
             stat[0] += len(self.logSection[SecParagraph])
             stat[1] += len(packed)
