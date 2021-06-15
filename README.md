@@ -41,4 +41,4 @@ Serialization
 
 Example of deserialization and plotting of the logged data files.
 
-    python -m apstrim.deserializer *.aps
+    python -m apstrim.plot *.aps
