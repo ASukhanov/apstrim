@@ -8,7 +8,8 @@
 #
 #__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
 #__version__ = '1.0.4a 2021-06-11'# flush the file after each section
-__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
+#__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
+__version__ = '1.0.5 2021-06-14'# handling of different returned maps
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -105,26 +106,30 @@ class apstrim ():
         #print(f'delivered: {args}')
         timestampedMap = {}
         for devPar,props in args[0].items():
-            try: # EPICS and ADO packing
+            try:
+              if isinstance(devPar, tuple):
+                 # EPICS and ADO packing
                 dev,par = devPar
                 value = props['value']
-                timestamp = props['timestamp']
+                timestamp = props.get('timestamp')# valid in EPICS and LITE
+                if timestamp == None:# decode ADO timestamp 
+                    timestamp = props['timestampSeconds']\
+                    + props['timestampNanoSeconds']*1.e-9
                 skey = self.pars[dev+':'+par][0]
-                #print(f'v,t: {skey, value, timestamp}')
-                if timestamp in timestampedMap:
-                    timestampedMap[timestamp][skey] = value
-                else:
-                    timestampedMap[timestamp] = {skey:value}
-            except: # try LITE packing:
+              else:
+                #LITE packing:
                 pars = props
                 for par in pars:
                     value = pars[par]['value']
                     timestamp = pars[par]['timestamp']
                     skey = self.pars[devPar+':'+par][0]
-                    if timestamp in timestampedMap:
-                        timestampedMap[timestamp][skey] = value
-                    else:
-                        timestampedMap[timestamp] = {skey:value}
+            except Exception as e:
+                printw(f'exception in unpacking: {e}')
+                continue
+            if timestamp in timestampedMap:
+                timestampedMap[timestamp][skey] = value
+            else:
+                timestampedMap[timestamp] = {skey:value}
         #TODO: timestampedMap may need sorting
         #print(f'timestampedMap: {timestampedMap}')
         with self.lock:
