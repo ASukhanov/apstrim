@@ -8,7 +8,7 @@ import msgpack_numpy
 msgpack_numpy.patch()
 import pyqtgraph as pg
 
-__version__ = 'v06 2021-06-14'# improved plotting: cursors, legends.
+__version__ = 'v06 2021-06-14'# improved plotting: cursors, legends. Qt4 compatible.
 
 #````````````````````````````Helper methods```````````````````````````````````
 def decompress(arg):
@@ -73,10 +73,12 @@ for file in pargs.files:
         try:
           for timestamp,parkeys in paragraphs:
             #print(f'paragraph: {timestamp,parkeys}')
-            for key,value in parkeys.items():
+            for key,values in parkeys.items():
+                try:    nVals = len(values)
+                except: values = [values] # make it subscriptable
                 par = key2par[key]
-                # if value is a vector then append all its points spaced by 1 us
-                for i,v in enumerate(value):
+                # if values is a vector then append all its points spaced by 1 us
+                for i,v in enumerate(values):
                     plotData[par]['x'].append(timestamp + i*1.e-6)
                     plotData[par]['y'].append(v)
                     #print(f'key {key}, ts: {timestamp}')
@@ -110,8 +112,11 @@ class DateAxis(pg.AxisItem):
                 strns.append('')
         return strns
 
+#QT5#win = pg.GraphicsLayoutWidget(show=True)
+qApp = pg.mkQApp()
+win = pg.GraphicsLayoutWidget()
+win.show()
 
-win = pg.GraphicsLayoutWidget(show=True)#, title="Basic plotting examples")
 win.resize(800,600)
 s = pargs.files[0] if len(pargs.files)==1 else pargs.files[0]+'...'
 win.setWindowTitle(f'Graphs[{len(plotData)}] of {s}')
@@ -183,4 +188,4 @@ def cursorPositionChanged(cursor):
 add_cursor('Vertical')
 add_cursor('Horizontal')
 
-pg.mkQApp().exec_()
+qApp.exec_()

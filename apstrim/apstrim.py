@@ -106,9 +106,10 @@ class apstrim ():
         #print(f'delivered: {args}')
         timestampedMap = {}
         for devPar,props in args[0].items():
+            #print(f'devPar: {devPar,props}, {type(devPar)}')
             try:
               if isinstance(devPar, tuple):
-                 # EPICS and ADO packing
+                # EPICS and ADO packing
                 dev,par = devPar
                 value = props['value']
                 timestamp = props.get('timestamp')# valid in EPICS and LITE
@@ -116,6 +117,8 @@ class apstrim ():
                     timestamp = props['timestampSeconds']\
                     + props['timestampNanoSeconds']*1.e-9
                 skey = self.pars[dev+':'+par][0]
+              elif devPar == 'ppmuser':# ADO has extra item, skip it.
+                continue
               else:
                 #LITE packing:
                 pars = props
