@@ -1,4 +1,7 @@
-"""Test of an upstrim-generated file: deserialze and plotItem all its items"""
+"""Test of an apstrim-generated files.
+It deserealizes the scalar and vector objects from files and plots them as 
+a stripchart.
+"""
 import sys, time, argparse
 from timeit import default_timer as timer
 from functools import partial

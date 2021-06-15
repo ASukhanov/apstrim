@@ -6,10 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-#__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
-#__version__ = '1.0.4a 2021-06-11'# flush the file after each section
-#__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
-__version__ = '1.0.5 2021-06-14'# handling of different returned maps
+__version__ = '1.0.1 2021-06-14'# handling of different returned maps
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -22,7 +19,7 @@ import msgpack_numpy
 msgpack_numpy.patch()
 
 #````````````````````````````Globals``````````````````````````````````````````
-LogSectionPeriod = 60# time between logBook sections
+LogSectionPeriod = 60 # time between logBook sections
 SecDateTime, SecParagraph = 0,1
 
 #````````````````````````````Helper functions`````````````````````````````````
@@ -80,7 +77,6 @@ class apstrim ():
         self.logbook.write(msgpack.packb(v))
         printi(f'Logbook file: {fileName} created')
 
-        #self.sectionNumber = 0# for testing
         self.create_logSection()
 
         printi('starting periodic thread')
@@ -142,14 +138,12 @@ class apstrim ():
       with self.lock:
         self.logParagraph = []
         key = time.strftime("%y%m%d:%H%M%S")
-        #self.sectionNumber +=1; self.logParagraph.append([time.time(),self.sectionNumber])# for testing
         self.logSection = (key, self.logParagraph)
 
     def serialize_section(self):
         printi('serialize_section started')
         periodic_update = time.time()
         stat = [0, 0]
-        #prev = [0, 0]
         try:
           while not self.eventExit.is_set():
             self.eventExit.wait(LogSectionPeriod)
@@ -171,8 +165,6 @@ class apstrim ():
             dt = timestamp - periodic_update
             if dt > 10.:
                 periodic_update = timestamp
-                #print(f'Written {stat[0]-prev[0]} paragraphs, {stat[1]-prev[1]} bytes')
-                #prev = copy.copy(stat)
                 print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
         except Exception as e:
             print(f'ERROR: Exception in serialize_section: {e}')

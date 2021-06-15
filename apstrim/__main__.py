@@ -1,5 +1,5 @@
 Description = '''Serializer of Process Variables (from EPICS infrastructure)
-or Data Objects (from other infrastructures, e.g. EPICS, ADO or LITE).'''
+or Data Objects from other infrastructures, e.g. ADO or LITE).'''
 
 import sys, argparse
 from .apstrim  import apstrim 
