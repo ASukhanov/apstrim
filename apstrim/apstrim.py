@@ -95,8 +95,7 @@ class apstrim ():
         self.logbook.write(msgpack.packb(self.headerSection))
         printi(f'Logbook file: {fileName} created')
 
-        #self.sectionNumber = 0# for testing
-        self._create_logSection()
+        self.create_logSection()
 
         #printi('starting periodic thread')
         myThread = threading.Thread(target=self._serialize_section)
@@ -168,14 +167,12 @@ class apstrim ():
       with self.lock:
         self.logParagraph = []
         key = time.strftime("%y%m%d:%H%M%S")
-        #self.sectionNumber +=1; self.logParagraph.append([time.time(),self.sectionNumber])# for testing
         self.logSection = (key, self.logParagraph)
 
     def _serialize_section(self):
         #printi('serialize_section started')
         periodic_update = time.time()
         stat = [0, 0]
-        #prev = [0, 0]
         try:
           while not self.eventExit.is_set():
             self.eventExit.wait(self.sectionInterval)
@@ -197,8 +194,6 @@ class apstrim ():
             dt = timestamp - periodic_update
             if dt > 10.:
                 periodic_update = timestamp
-                #print(f'Written {stat[0]-prev[0]} paragraphs, {stat[1]-prev[1]} bytes')
-                #prev = copy.copy(stat)
                 if not self.quiet:
                     print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
         except Exception as e:

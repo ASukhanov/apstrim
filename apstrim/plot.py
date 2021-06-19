@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 """Test of apstrim-generated files: deserialze and plot all their items"""
+=======
+"""Test of an apstrim-generated files.
+It deserealizes the scalar and vector objects from files and plots them as 
+a stripchart.
+"""
+>>>>>>> 9f2141f17cc63a6d6617531fd8213fd66dde00c6
 import sys, time, argparse
 from timeit import default_timer as timer
 from functools import partial
