@@ -1,4 +1,4 @@
-"""Test of an upstrim-generated file: deserialze and plotItem all its items"""
+"""Test of apstrim-generated files: deserialze and plot all their items"""
 import sys, time, argparse
 from timeit import default_timer as timer
 from functools import partial
@@ -9,7 +9,7 @@ msgpack_numpy.patch()
 import pyqtgraph as pg
 
 __version__ = 'v06 2021-06-14'# improved plotting: cursors, legends. Qt4 compatible.
-
+Nano = 1000000000
 #````````````````````````````Helper methods```````````````````````````````````
 def decompress(arg):
     # Stub function for decompressing
@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 #'String of 1-letter keys of the parameter map e.g. 1357'))
 parser.add_argument('-f', '--fastPlotting', action='store_true', help=\
 'Fast plotting (for large data sets)')
-parser.add_argument('files', nargs='*', default='apstrim.aps', help=\
+parser.add_argument('files', nargs='*', default=['apstrim.aps'], help=\
 'Input files, Unix style pathname pattern expansion allowed e.g: pi0_2021*.aps')
 pargs = parser.parse_args()
 #print(f'pargs: {pargs}')
@@ -66,12 +66,14 @@ for file in pargs.files:
                 decompressed = decompress(section)
                 section = msgpack.unpackb(decompressed)
             sectionDatetime, paragraphs = section
+            #print(f'Section time: {sectionDatetime}')
         except Exception as e:
             print(f'WARNING: wrong section {nSections}: {str(section)[:75]}...')
             continue
         nParagraphs += len(paragraphs)
         try:
           for timestamp,parkeys in paragraphs:
+            timestamp /= Nano
             #print(f'paragraph: {timestamp,parkeys}')
             for key,values in parkeys.items():
                 try:    nVals = len(values)

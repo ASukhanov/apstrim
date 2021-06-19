@@ -15,9 +15,13 @@ def main():
     #parser.add_argument('-f', '--file', default=None, help=\
     #'Configuration file')
     parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
-    'File for storing PVs and data objects')
+    'Logbook file for storing PVs and data objects')
     parser.add_argument('-n', '--namespace', default='EPICS', help=\
     'Infrastructure namespace, e.g.: EPICS, ADO or LITE')
+    parser.add_argument('-t', '--sectionTime', type=float, default=60., help=\
+    'Time interval of writing of sections to logbook')
+    parser.add_argument('-q', '--quiet', action='store_true', help=\
+    'Quiet: dont print section progress')
     parser.add_argument('pvNames', nargs='*', help=\
     'Data Object names, one item per device parameters are comma-separated: dev1:par1,par2 dev2:par1,par2') 
     pargs = parser.parse_args()
@@ -44,7 +48,16 @@ def main():
                 pvNames.append(dev+':'+par)
     #print(f'pvNames: {pvNames}')
 
-    ups = apstrim(pargs.outfile, publisher, pvNames, pargs.compress) 
+    aps = apstrim(publisher, pvNames, pargs.sectionTime, pargs.compress
+    , pargs.quiet)
+    aps.start(pargs.outfile)
+
+    timeSpan = 0 #pargs.sectionTime*2 + 5
+    txt = f'for {round(timeSpan/60., 2)} m' if timeSpan else 'endlessly'
+    print(f'Streaming started {txt}, press Ctrl/C to stop.')
+    if timeSpan:
+        aps.eventExit.wait(timeSpan)
+        aps.stop()
 
 if __name__ == '__main__':
     main()

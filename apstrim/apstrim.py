@@ -9,7 +9,8 @@
 #__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
 #__version__ = '1.0.4a 2021-06-11'# flush the file after each section
 #__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
-__version__ = '1.0.5 2021-06-14'# handling of different returned maps
+#__version__ = '1.0.5 2021-06-14'# handling of different returned maps
+__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -22,9 +23,8 @@ import msgpack_numpy
 msgpack_numpy.patch()
 
 #````````````````````````````Globals``````````````````````````````````````````
-LogSectionPeriod = 60# time between logBook sections
 SecDateTime, SecParagraph = 0,1
-
+Nano = 1000000000
 #````````````````````````````Helper functions`````````````````````````````````
 def printTime(): return time.strftime("%m%d:%H%M%S")
 def printi(msg): print(f'INFO_AS@{printTime()}: {msg}')
@@ -47,22 +47,38 @@ def shortkey(i:int):
 class apstrim ():
     eventExit = threading.Event()
 
-    def __init__(self, fileName, namespace, pars, compression):
-        print(f'apstrim  {__version__}, period {LogSectionPeriod}')
-        #self.logbook = BytesIO()
-        signal.signal(signal.SIGINT, safeExit)
-        signal.signal(signal.SIGTERM, safeExit)
-        v = {'apstrim ':__version__}
+    def __init__(self, publisher, devPars:list, sectionInterval=60.
+    , compression=False, quiet=False):
+        """Create the object streamer. 
+        publisher is a class, providing a subscribe() method,
+        devPar: list of device:parameter strings,
+        sectionInterval: time between writing of the logBook sections
+        compression: compression enable flag.
+        """
+        #printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+        self.publisher = publisher
+        self.devPars = devPars
+        self.sectionInterval = sectionInterval
+        self.quiet = quiet
+        signal.signal(signal.SIGINT, _safeExit)
+        signal.signal(signal.SIGTERM, _safeExit)
+        self.headerSection = {'apstrim ':__version__
+        , 'sectionInterval':sectionInterval}
         if compression:
             import lz4framed
             self.compress = lz4framed.compress
-            v['compression'] = 'lz4framed'
+            self.headerSection['compression'] = 'lz4framed'
         else:
             self.compress = None
-            v['compression'] = 'None'
+            self.headerSection['compression'] = 'None'
+        printi(f'Header section: {self.headerSection}')
         self.lock = threading.Lock()
 
-        # if file exist then rename the existing file
+
+    def start(self, fileName:str):
+        """Start streaming of data objects to logbook file
+        """
+        # if file exists then rename the existing file
         try:
             modificationTime = pathlib.Path(fileName).stat().st_mtime
             dt = datetime.datetime.fromtimestamp(modificationTime)
@@ -76,33 +92,37 @@ class apstrim ():
             pass
 
         self.logbook = open(fileName, 'wb')
-        self.publisher = namespace
-        self.logbook.write(msgpack.packb(v))
+        self.logbook.write(msgpack.packb(self.headerSection))
         printi(f'Logbook file: {fileName} created')
 
         #self.sectionNumber = 0# for testing
-        self.create_logSection()
+        self._create_logSection()
 
-        printi('starting periodic thread')
-        myThread = threading.Thread(target=self.serialize_section)
+        #printi('starting periodic thread')
+        myThread = threading.Thread(target=self._serialize_section)
         myThread.start()
 
         self.pars = {}
-        for i,pname in enumerate(pars):
+        for i,pname in enumerate(self.devPars):
             devPar = tuple(pname.rsplit(':',1))
             if True:#try:
-                self.publisher.subscribe(self.delivered, devPar)
+                self.publisher.subscribe(self._delivered, devPar)
             else:#except Exception as e:
                 printe(f'Subscription failed for {pname}: {e}')
                 continue
             self.pars[pname] = [shortkey(i)]
-        print(f'pars: {self.pars}')
+        printi(f'parameters: {self.pars}')
         self.logbook.write(msgpack.packb({'parameters':self.pars}))
 
-    def close(self):
-        self.logbook.close()
+    def stop(self):
+        """Stop the streaming"""
+        self.eventExit.set()
+        #self.logbook.close()
 
-    def delivered(self, *args):
+    def _delivered(self, *args):
+        """Callback, specified in the subscribe() request. 
+        Called when the requested data have been changed.
+        args is a map of delivered objects."""
         #print(f'delivered: {args}')
         timestampedMap = {}
         for devPar,props in args[0].items():
@@ -114,8 +134,10 @@ class apstrim ():
                 value = props['value']
                 timestamp = props.get('timestamp')# valid in EPICS and LITE
                 if timestamp == None:# decode ADO timestamp 
-                    timestamp = props['timestampSeconds']\
-                    + props['timestampNanoSeconds']*1.e-9
+                    timestamp = int(props['timestampSeconds']*Nano
+                    + props['timestampNanoSeconds'])
+                else:
+                    timestamp = int(timestamp*Nano)
                 skey = self.pars[dev+':'+par][0]
               elif devPar == 'ppmuser':# ADO has extra item, skip it.
                 continue
@@ -123,8 +145,12 @@ class apstrim ():
                 #LITE packing:
                 pars = props
                 for par in pars:
-                    value = pars[par]['value']
-                    timestamp = pars[par]['timestamp']
+                    try:
+                        value = pars[par]['v']
+                        timestamp = int(pars[par]['t'])
+                    except: # try old LITE packing
+                        value = pars[par]['value']                     
+                        timestamp = int(pars[par]['timestamp']*Nano)
                     skey = self.pars[devPar+':'+par][0]
             except Exception as e:
                 printw(f'exception in unpacking: {e}')
@@ -138,21 +164,21 @@ class apstrim ():
         with self.lock:
             self.logParagraph.append(list(timestampedMap.items())[0])
         
-    def create_logSection(self):
+    def _create_logSection(self):
       with self.lock:
         self.logParagraph = []
         key = time.strftime("%y%m%d:%H%M%S")
         #self.sectionNumber +=1; self.logParagraph.append([time.time(),self.sectionNumber])# for testing
         self.logSection = (key, self.logParagraph)
 
-    def serialize_section(self):
-        printi('serialize_section started')
+    def _serialize_section(self):
+        #printi('serialize_section started')
         periodic_update = time.time()
         stat = [0, 0]
         #prev = [0, 0]
         try:
           while not self.eventExit.is_set():
-            self.eventExit.wait(LogSectionPeriod)
+            self.eventExit.wait(self.sectionInterval)
             if len(self.logSection[SecParagraph]) == 0:
                 continue
 
@@ -166,21 +192,22 @@ class apstrim ():
 
             stat[0] += len(self.logSection[SecParagraph])
             stat[1] += len(packed)
-            self.create_logSection()
+            self._create_logSection()
             timestamp = time.time()
             dt = timestamp - periodic_update
             if dt > 10.:
                 periodic_update = timestamp
                 #print(f'Written {stat[0]-prev[0]} paragraphs, {stat[1]-prev[1]} bytes')
                 #prev = copy.copy(stat)
-                print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
+                if not self.quiet:
+                    print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
         except Exception as e:
             print(f'ERROR: Exception in serialize_section: {e}')
         print(f'Logging finished after {stat[0]} paragraphs')
         self.logbook.close()
                 
-def safeExit(_signo, _stack_frame):#, self=None):
+def _safeExit(_signo, _stack_frame):#, self=None):
     print('safeExit')
-    apstrim .eventExit.set()
+    apstrim.eventExit.set()
     
                 
