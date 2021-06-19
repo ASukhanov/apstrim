@@ -95,7 +95,7 @@ class apstrim ():
         self.logbook.write(msgpack.packb(self.headerSection))
         printi(f'Logbook file: {fileName} created')
 
-        self.create_logSection()
+        self._create_logSection()
 
         #printi('starting periodic thread')
         myThread = threading.Thread(target=self._serialize_section)
