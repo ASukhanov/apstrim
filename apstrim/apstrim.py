@@ -11,6 +11,7 @@
 #__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
 #__version__ = '1.0.5 2021-06-14'# handling of different returned maps
 __version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
+__version__ = '1.0.7 2021-06-20'# Docstrings updated
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -26,10 +27,10 @@ msgpack_numpy.patch()
 SecDateTime, SecParagraph = 0,1
 Nano = 1000000000
 #````````````````````````````Helper functions`````````````````````````````````
-def printTime(): return time.strftime("%m%d:%H%M%S")
-def printi(msg): print(f'INFO_AS@{printTime()}: {msg}')
-def printw(msg): print(f'WARN_AS@{printTime()}: {msg}')
-def printe(msg): print(f'ERROR_AS@{printTime()}: {msg}')
+def _printTime(): return time.strftime("%m%d:%H%M%S")
+def _printi(msg): print(f'INFO_AS@{_printTime()}: {msg}')
+def _printw(msg): print(f'WARN_AS@{_printTime()}: {msg}')
+def _printe(msg): print(f'ERROR_AS@{_printTime()}: {msg}')
 
 def croppedText(txt, limit=200):
     if len(txt) > limit:
@@ -44,18 +45,19 @@ def shortkey(i:int):
     return s[i] if quotient==0 else s[quotient]+s[reminder]
 
 #````````````````````````````Serializer class`````````````````````````````````
-class apstrim ():
+class apstrim():
+    """Create the object streamer. 
+    publisher: is a class, providing a subscribe() method,
+    devPar: list of device:parameter strings,
+    sectionInterval: time between writing of the logBook sections
+    compression: compression enable flag,
+    quiet: do not print section writing progress.
+    """
     eventExit = threading.Event()
 
     def __init__(self, publisher, devPars:list, sectionInterval=60.
     , compression=False, quiet=False):
-        """Create the object streamer. 
-        publisher is a class, providing a subscribe() method,
-        devPar: list of device:parameter strings,
-        sectionInterval: time between writing of the logBook sections
-        compression: compression enable flag.
-        """
-        #printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+        #_printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
         self.publisher = publisher
         self.devPars = devPars
         self.sectionInterval = sectionInterval
@@ -71,14 +73,15 @@ class apstrim ():
         else:
             self.compress = None
             self.headerSection['compression'] = 'None'
-        printi(f'Header section: {self.headerSection}')
+        _printi(f'Header section: {self.headerSection}')
         self.lock = threading.Lock()
 
 
-    def start(self, fileName:str):
-        """Start streaming of data objects to logbook file
+    def start(self, fileName='apstrim.aps'):
+        """Start streaming of the data objects to logbook file.
+        If file is already exist then it will be renamed and
+        a new file will be open with the provided name.
         """
-        # if file exists then rename the existing file
         try:
             modificationTime = pathlib.Path(fileName).stat().st_mtime
             dt = datetime.datetime.fromtimestamp(modificationTime)
@@ -87,17 +90,17 @@ class apstrim ():
             except:    fname,ext = fileName,''
             otherName = fname + suffix + '.' + ext
             os.rename(fileName, otherName)
-            printw(f'Existing file {fileName} have been renamed to {otherName}')
+            _printw(f'Existing file {fileName} have been renamed to {otherName}')
         except Exception as e:
             pass
 
         self.logbook = open(fileName, 'wb')
         self.logbook.write(msgpack.packb(self.headerSection))
-        printi(f'Logbook file: {fileName} created')
+        _printi(f'Logbook file: {fileName} created')
 
         self._create_logSection()
 
-        #printi('starting periodic thread')
+        #_printi('starting periodic thread')
         myThread = threading.Thread(target=self._serialize_section)
         myThread.start()
 
@@ -107,14 +110,14 @@ class apstrim ():
             if True:#try:
                 self.publisher.subscribe(self._delivered, devPar)
             else:#except Exception as e:
-                printe(f'Subscription failed for {pname}: {e}')
+                __printe(f'Subscription failed for {pname}: {e}')
                 continue
             self.pars[pname] = [shortkey(i)]
-        printi(f'parameters: {self.pars}')
+        _printi(f'parameters: {self.pars}')
         self.logbook.write(msgpack.packb({'parameters':self.pars}))
 
     def stop(self):
-        """Stop the streaming"""
+        """Stop the streaming."""
         self.eventExit.set()
         #self.logbook.close()
 
@@ -152,7 +155,7 @@ class apstrim ():
                         timestamp = int(pars[par]['timestamp']*Nano)
                     skey = self.pars[devPar+':'+par][0]
             except Exception as e:
-                printw(f'exception in unpacking: {e}')
+                _printw(f'exception in unpacking: {e}')
                 continue
             if timestamp in timestampedMap:
                 timestampedMap[timestamp][skey] = value
@@ -170,7 +173,7 @@ class apstrim ():
         self.logSection = (key, self.logParagraph)
 
     def _serialize_section(self):
-        #printi('serialize_section started')
+        #_printi('serialize_section started')
         periodic_update = time.time()
         stat = [0, 0]
         try:

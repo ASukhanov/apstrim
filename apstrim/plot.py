@@ -1,4 +1,4 @@
-"""Test of an apstrim-generated files.
+"""Test of the apstrim-generated files.
 It deserealizes the scalar and vector objects from files and plots them as 
 a stripchart.
 """

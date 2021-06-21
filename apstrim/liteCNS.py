@@ -1,13 +1,14 @@
-#!/usr/bin/env python3
-"""This script provide conversion of LDO name to (host:port,device)"""
+"""This module is used for LITE infrastructure to
+provide conversion of LDO name to (host:port,device).
+"""
 # If CNSHostPort is defined, then the name will be resolved using a dedicated
 #liteCNSServer. If it is not defined then the name will be resolved using 
 #liteCNS.yaml file.
-__version__='v01 2021-04-19'#
-print(f'liteCNS version {__version__}')
+#__version__='v01 2021-04-19'#
+#print(f'liteCNS version {__version__}')
 
 # Comment the following line for file-based name resolution
-#CNSHostPort = 'acnlin23;9699'# host;port of the liteServer
+#CNSHostPort = 'liteHost;9699'# host;port of the liteServer
 
 #`````````````````````````````````````````````````````````````````````````````
 def hostPort(cnsName):

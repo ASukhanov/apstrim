@@ -42,12 +42,12 @@ Serialization
 	...
 	# Note, Compression is very poor for vector parameters
 
-	python -m apstrim -nLITE acnlin23:dev1:cycle
+	python -m apstrim -nLITE liteHost:dev1:cycle
 	pars: {'acnlin23:dev1:cycle': ['0']}
 	21-06-19 11:16:42 Logged 5729 paragraphs, 103.14 KBytes
 	...
 
-	:python -m apstrim -nLITE --compress acnlin23:dev1:cycle
+	:python -m apstrim -nLITE --compress liteHost:dev1:cycle
 	21-06-19 11:18:02 Logged 5733 paragraphs, 53.75 KBytes
 	...
 	# Compression ratio = 1.9
