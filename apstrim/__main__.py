@@ -10,8 +10,10 @@ def main():
     parser = argparse.ArgumentParser(description=Description)
     parser.add_argument('-c', '--compress', action='store_true', help=\
     'Enable online compression')
-    #parser.add_argument('-d', '--dbg', action='store_true', help=\
+    #parser.add_argument('-D', '--dbg', action='store_true', help=\
     #'turn on debugging')
+    parser.add_argument('-d', '--doublePrecision', action='store_true', help=\
+    'Disable conversion of float64 to float32')
     #parser.add_argument('-f', '--file', default=None, help=\
     #'Configuration file')
     parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
@@ -48,8 +50,8 @@ def main():
                 pvNames.append(dev+':'+par)
     #print(f'pvNames: {pvNames}')
 
-    aps = apstrim(publisher, pvNames, pargs.sectionTime, pargs.compress
-    , pargs.quiet)
+    aps = apstrim(publisher, pvNames, pargs.sectionTime, compress=pargs.compress
+    , quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
     aps.start(pargs.outfile)
 
     timeSpan = 0 #pargs.sectionTime*2 + 5

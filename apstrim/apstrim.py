@@ -11,12 +11,18 @@
 #__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
 #__version__ = '1.0.5 2021-06-14'# handling of different returned maps
 #__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
-__version__ = '1.0.7 2021-06-20'# Docstrings updated
+#__version__ = '1.0.7 2021-06-20'# Docstrings updated
+__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
+#TODO: consider replace msgpack_numpy with something simple and predictable.
+#The use_single_float has no efect in msgPack,
+#TODO: check how ints are handled: ideally they should be dynamically
+#converted to int8,int16,int32 or int64 depending of its value.
 
 import sys, time, string, copy
 import os, pathlib, datetime
 import threading
 import signal
+#from timeit import default_timer as timer
 
 import numpy as np
 import msgpack
@@ -51,22 +57,24 @@ class apstrim():
     devPar: list of device:parameter strings,
     sectionInterval: time between writing of the logBook sections
     compression: compression enable flag,
-    quiet: do not print section writing progress.
+    quiet: do not print section writing progress,
+    use_single_float: Use single precision float type for float. (default: False)
     """
     eventExit = threading.Event()
 
     def __init__(self, publisher, devPars:list, sectionInterval=60.
-    , compression=False, quiet=False):
+    , compress=False, quiet=False, use_single_float=True):
         #_printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
         self.publisher = publisher
         self.devPars = devPars
         self.sectionInterval = sectionInterval
         self.quiet = quiet
+        self.use_single_float = use_single_float
         signal.signal(signal.SIGINT, _safeExit)
         signal.signal(signal.SIGTERM, _safeExit)
         self.headerSection = {'apstrim ':__version__
         , 'sectionInterval':sectionInterval}
-        if compression:
+        if compress:
             import lz4framed
             self.compress = lz4framed.compress
             self.headerSection['compression'] = 'lz4framed'
@@ -75,7 +83,6 @@ class apstrim():
             self.headerSection['compression'] = 'None'
         _printi(f'Header section: {self.headerSection}')
         self.lock = threading.Lock()
-
 
     def start(self, fileName='apstrim.aps'):
         """Start streaming of the data objects to logbook file.
@@ -95,8 +102,8 @@ class apstrim():
             pass
 
         self.logbook = open(fileName, 'wb')
-        self.logbook.write(msgpack.packb(self.headerSection))
-        _printi(f'Logbook file: {fileName} created')
+        self.logbook.write(msgpack.packb(self.headerSection
+        , use_single_float=self.use_single_float))
 
         self._create_logSection()
 
@@ -114,7 +121,9 @@ class apstrim():
                 continue
             self.pars[pname] = [shortkey(i)]
         _printi(f'parameters: {self.pars}')
-        self.logbook.write(msgpack.packb({'parameters':self.pars}))
+        self.logbook.write(msgpack.packb({'parameters':self.pars}
+        , use_single_float=self.use_single_float))
+        _printi(f'Logbook file: {fileName} created')
 
     def stop(self):
         """Stop the streaming."""
@@ -157,6 +166,16 @@ class apstrim():
             except Exception as e:
                 _printw(f'exception in unpacking: {e}')
                 continue
+
+            if self.use_single_float:
+                # Changing numpy float64 to float32 halves the data volume
+                #ts = timer()
+                try:    
+                    if value.dtype=='float64':
+                        value = value.astype('float32')
+                    #print(f'Numpy f64->f32 reduction time: {round(timer()-ts,6)}')
+                except:    pass
+
             if timestamp in timestampedMap:
                 timestampedMap[timestamp][skey] = value
             else:
@@ -183,10 +202,12 @@ class apstrim():
                 continue
 
             #print(f'write section {self.logSection}')
-            packed = msgpack.packb(self.logSection)
+            packed = msgpack.packb(self.logSection
+            , use_single_float=self.use_single_float)
             if self.compress is not None:
                 compressed = self.compress(packed)
-                packed = msgpack.packb(compressed)
+                packed = msgpack.packb(compressed
+                , use_single_float=self.use_single_float)
             self.logbook.write(packed)
             self.logbook.flush()
 

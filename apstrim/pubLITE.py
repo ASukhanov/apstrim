@@ -418,7 +418,7 @@ class SubscriptionSocket():
             self.thread.start()
 
     def receivingThread(self):
-        printi(f'>receiving thread started for {self.hostPort}') 
+        #printi(f'>receiving thread started for {self.hostPort}') 
         while not self.event.is_set():
             try:
                 dictio = receive_dictio(self.socket, self.hostPort)
