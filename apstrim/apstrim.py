@@ -10,7 +10,7 @@
 #__version__ = '1.0.4a 2021-06-11'# flush the file after each section
 #__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
 #__version__ = '1.0.5 2021-06-14'# handling of different returned maps
-__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
+#__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
 __version__ = '1.0.7 2021-06-20'# Docstrings updated
 
 import sys, time, string, copy
