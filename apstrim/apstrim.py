@@ -12,8 +12,10 @@
 #__version__ = '1.0.5 2021-06-14'# handling of different returned maps
 #__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
 #__version__ = '1.0.7 2021-06-20'# Docstrings updated
-__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
-#TODO: consider replace msgpack_numpy with something simple and predictable.
+#__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
+__version__ = '1.0.10 2021-06-21'# separate events for exit and stop
+
+#TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
 #TODO: check how ints are handled: ideally they should be dynamically
 #converted to int8,int16,int32 or int64 depending of its value.
@@ -53,14 +55,17 @@ def shortkey(i:int):
 #````````````````````````````Serializer class`````````````````````````````````
 class apstrim():
     """Create the object streamer. 
-    publisher: is a class, providing a subscribe() method,
-    devPar: list of device:parameter strings,
+    publisher:      is a class, providing a subscribe() method,
+    devPar:         list of device:parameter strings,
     sectionInterval: time between writing of the logBook sections
-    compression: compression enable flag,
-    quiet: do not print section writing progress,
+    compression:    compression enable flag,
+    quiet:          do not print section writing progress,
     use_single_float: Use single precision float type for float. (default: False)
+    eventExit:      is a threading.Event, which will be set when application
+     is about to exit.
     """
     eventExit = threading.Event()
+    _eventStop = threading.Event()
 
     def __init__(self, publisher, devPars:list, sectionInterval=60.
     , compress=False, quiet=False, use_single_float=True):
@@ -89,6 +94,7 @@ class apstrim():
         If file is already exist then it will be renamed and
         a new file will be open with the provided name.
         """
+        self._eventStop.clear()
         try:
             modificationTime = pathlib.Path(fileName).stat().st_mtime
             dt = datetime.datetime.fromtimestamp(modificationTime)
@@ -121,13 +127,14 @@ class apstrim():
                 continue
             self.pars[pname] = [shortkey(i)]
         _printi(f'parameters: {self.pars}')
-        self.logbook.write(msgpack.packb({'parameters':self.pars}
-        , use_single_float=self.use_single_float))
+        buf = msgpack.packb({'parameters':self.pars}
+        , use_single_float=self.use_single_float)
+        self.logbook.write(buf)
         _printi(f'Logbook file: {fileName} created')
 
     def stop(self):
         """Stop the streaming."""
-        self.eventExit.set()
+        self._eventStop.set()
         #self.logbook.close()
 
     def _delivered(self, *args):
@@ -196,8 +203,8 @@ class apstrim():
         periodic_update = time.time()
         stat = [0, 0]
         try:
-          while not self.eventExit.is_set():
-            self.eventExit.wait(self.sectionInterval)
+          while not self._eventStop.is_set():
+            self._eventStop.wait(self.sectionInterval)
             if len(self.logSection[SecParagraph]) == 0:
                 continue
 
@@ -227,6 +234,7 @@ class apstrim():
                 
 def _safeExit(_signo, _stack_frame):#, self=None):
     print('safeExit')
+    apstrim._eventStop.set()
     apstrim.eventExit.set()
     
                 
