@@ -13,7 +13,9 @@
 #__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
 #__version__ = '1.0.7 2021-06-20'# Docstrings updated
 #__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
-__version__ = '1.0.10 2021-06-21'# separate events for exit and stop
+#__version__ = '1.0.10 2021-06-22'# separate events for exit and stop
+#__version__ = '1.0.11 2021-06-22'# intercept exception in _delivered()
+__version__ = '1.1.0 2021-06-23'# fixed bug when subscriptions was multiplied every start()
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -77,16 +79,33 @@ class apstrim():
         self.use_single_float = use_single_float
         signal.signal(signal.SIGINT, _safeExit)
         signal.signal(signal.SIGTERM, _safeExit)
-        self.headerSection = {'apstrim ':__version__
+
+        # create section Abstract
+        self.abstractSection = {'apstrim ':__version__
         , 'sectionInterval':sectionInterval}
         if compress:
             import lz4framed
             self.compress = lz4framed.compress
-            self.headerSection['compression'] = 'lz4framed'
+            self.abstractSection['compression'] = 'lz4framed'
         else:
             self.compress = None
-            self.headerSection['compression'] = 'None'
-        _printi(f'Header section: {self.headerSection}')
+            self.abstractSection['compression'] = 'None'
+        _printi(f'Abstract section: {self.abstractSection}')
+
+        # create section Abbreviations
+        self.pars = {}
+        for i,pname in enumerate(self.devPars):
+            devPar = tuple(pname.rsplit(':',1))
+            if True:#try:
+                self.publisher.subscribe(self._delivered, devPar)
+            else:#except Exception as e:
+                __printe(f'Subscription failed for {pname}: {e}')
+                continue
+            self.pars[pname] = [shortkey(i)]
+        _printi(f'parameters: {self.pars}')
+        self.abbreviationSection = msgpack.packb({'parameters':self.pars}
+        , use_single_float=self.use_single_float)
+
         self.lock = threading.Lock()
 
     def start(self, fileName='apstrim.aps'):
@@ -108,28 +127,18 @@ class apstrim():
             pass
 
         self.logbook = open(fileName, 'wb')
-        self.logbook.write(msgpack.packb(self.headerSection
+
+        # write the sections Abstract and Abbreviations
+        self.logbook.write(msgpack.packb(self.abstractSection
         , use_single_float=self.use_single_float))
+        self.logbook.write(self.abbreviationSection)
 
         self._create_logSection()
 
-        #_printi('starting periodic thread')
+        #_printi('starting serialization  thread')
         myThread = threading.Thread(target=self._serialize_section)
         myThread.start()
 
-        self.pars = {}
-        for i,pname in enumerate(self.devPars):
-            devPar = tuple(pname.rsplit(':',1))
-            if True:#try:
-                self.publisher.subscribe(self._delivered, devPar)
-            else:#except Exception as e:
-                __printe(f'Subscription failed for {pname}: {e}')
-                continue
-            self.pars[pname] = [shortkey(i)]
-        _printi(f'parameters: {self.pars}')
-        buf = msgpack.packb({'parameters':self.pars}
-        , use_single_float=self.use_single_float)
-        self.logbook.write(buf)
         _printi(f'Logbook file: {fileName} created')
 
     def stop(self):
@@ -190,7 +199,10 @@ class apstrim():
         #TODO: timestampedMap may need sorting
         #print(f'timestampedMap: {timestampedMap}')
         with self.lock:
-            self.logParagraph.append(list(timestampedMap.items())[0])
+            try:
+                self.logParagraph.append(list(timestampedMap.items())[0])
+            except Exception as e:
+                _printe(f'Exception in _delivered for {args}: {e}')
         
     def _create_logSection(self):
       with self.lock:
