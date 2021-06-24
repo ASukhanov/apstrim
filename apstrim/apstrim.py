@@ -15,7 +15,8 @@
 #__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
 #__version__ = '1.0.10 2021-06-22'# separate events for exit and stop
 #__version__ = '1.0.11 2021-06-22'# intercept exception in _delivered()
-__version__ = '1.1.0 2021-06-23'# fixed bug when subscriptions was multiplied every start()
+#__version__ = '1.1.0 2021-06-23'# fixed bug when subscriptions was multiplied every start()
+__version__ = '1.1.1 2021-06-23'# Compression ratio printed at the end
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -83,6 +84,7 @@ class apstrim():
         # create section Abstract
         self.abstractSection = {'apstrim ':__version__
         , 'sectionInterval':sectionInterval}
+
         if compress:
             import lz4framed
             self.compress = lz4framed.compress
@@ -136,7 +138,7 @@ class apstrim():
         self._create_logSection()
 
         #_printi('starting serialization  thread')
-        myThread = threading.Thread(target=self._serialize_section)
+        myThread = threading.Thread(target=self._serialize_sections)
         myThread.start()
 
         _printi(f'Logbook file: {fileName} created')
@@ -210,10 +212,10 @@ class apstrim():
         key = time.strftime("%y%m%d:%H%M%S")
         self.logSection = (key, self.logParagraph)
 
-    def _serialize_section(self):
-        #_printi('serialize_section started')
+    def _serialize_sections(self):
+        #_printi('serialize_sections started')
         periodic_update = time.time()
-        stat = [0, 0]
+        stat = [0, 0, 0]
         try:
           while not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
@@ -223,28 +225,33 @@ class apstrim():
             #print(f'write section {self.logSection}')
             packed = msgpack.packb(self.logSection
             , use_single_float=self.use_single_float)
+            stat[0] += len(self.logSection[SecParagraph])
+            stat[1] += len(packed)
             if self.compress is not None:
                 compressed = self.compress(packed)
                 packed = msgpack.packb(compressed
                 , use_single_float=self.use_single_float)
+            stat[2] += len(packed)    
             self.logbook.write(packed)
             self.logbook.flush()
 
-            stat[0] += len(self.logSection[SecParagraph])
-            stat[1] += len(packed)
             self._create_logSection()
             timestamp = time.time()
             dt = timestamp - periodic_update
             if dt > 10.:
                 periodic_update = timestamp
                 if not self.quiet:
-                    print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged {stat[0]} paragraphs, {stat[1]/1000.} KBytes')
+                    print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged'
+                    f' {stat[0]} paragraphs, {stat[2]/1000.} KBytes')
         except Exception as e:
-            print(f'ERROR: Exception in serialize_section: {e}')
-        print(f'Logging finished after {stat[0]} paragraphs')
+            print(f'ERROR: Exception in serialize_sections: {e}')
+        msg = f'Logging finished for {stat[0]} paragraphs, {stat[2]/1000.} KB.'
+        if self.compress is not None:
+            msg += f' Compression ratio:{round(stat[1]/stat[2],2)}'
+        print(msg)
         self.logbook.close()
                 
-def _safeExit(_signo, _stack_frame):#, self=None):
+def _safeExit(_signo, _stack_frame):
     print('safeExit')
     apstrim._eventStop.set()
     apstrim.eventExit.set()
