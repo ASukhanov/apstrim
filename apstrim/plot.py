@@ -13,12 +13,7 @@ import pyqtgraph as pg
 
 __version__ = 'v06 2021-06-14'# improved plotting: cursors, legends. Qt4 compatible.
 Nano = 1000000000
-#````````````````````````````Helper methods```````````````````````````````````
-def decompress(arg):
-    # Stub function for decompressing
-    return
-#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-#````````````````````````````Deserialize files````````````````````````````````
+
 parser = argparse.ArgumentParser(description=__doc__)
 #parser.add_argument('-k', '--keys', help=('Items to plot. '
 #'String of 1-letter keys of the parameter map e.g. 1357'))
@@ -39,10 +34,9 @@ for file in pargs.files:
     nSections = 0
     nParagraphs = 0
     for section in book:
-        #if nSections > 100:  break
         nSections += 1
-        if nSections == 1:# skip info section 
-            print(f'file info: {section}')
+        if nSections == 1:# section: Abstract
+            print(f'Section Abstract: {section}')
             compression = section.get('compression')
             if compression is None:
                 continue
@@ -50,26 +44,23 @@ for file in pargs.files:
                 module = __import__(compression)
                 decompress = module.decompress
             continue
-        if nSections == 2:# section: parameters
+        if nSections == 2:# section: Abbreviations
             par2key = section['parameters']
             key2par = {value[0]:key for key,value in par2key.items()}
             print(f'parameter map: {key2par}')
             for key,par in key2par.items():
-                #if key not in plotData:
-                #    plotData[key] = {'par':par, 'x':[], 'y':[]}
                 if par not in plotData:
                     #print(f'add to graph[{len(plotData)+1}]: {par}') 
                     plotData[par] = {'x':[], 'y':[]}
             continue
     
         # data sections
-        #print(f'dsec: {section}')
+        #print(f'Data Section: {section}')
         try:
             if compression != 'None':
                 decompressed = decompress(section)
                 section = msgpack.unpackb(decompressed)
             sectionDatetime, paragraphs = section
-            #print(f'Section time: {sectionDatetime}')
         except Exception as e:
             print(f'WARNING: wrong section {nSections}: {str(section)[:75]}...')
             continue
