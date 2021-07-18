@@ -6,17 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-#__version__ = '1.0.3 2021-06-01'# EPICS and LITE support is OK, Compression supported
-#__version__ = '1.0.4a 2021-06-11'# flush the file after each section
-#__version__ = '1.0.4 2021-06-11'# if file exist then rename the existing file
-#__version__ = '1.0.5 2021-06-14'# handling of different returned maps
-#__version__ = '1.0.6 2021-06-19'# filename moved from instantiation to new method: start(), timestamp is int(nanoseconds)
-#__version__ = '1.0.7 2021-06-20'# Docstrings updated
-#__version__ = '1.0.9 2021-06-21'# new keyword: self.use_single_float
-#__version__ = '1.0.10 2021-06-22'# separate events for exit and stop
-#__version__ = '1.0.11 2021-06-22'# intercept exception in _delivered()
-#__version__ = '1.1.0 2021-06-23'# fixed bug when subscriptions was multiplied every start()
-__version__ = '1.1.1 2021-06-23'# Compression ratio printed at the end
+__version__ = '1.1.2 2021-07-17'# 
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -35,8 +25,8 @@ import msgpack_numpy
 msgpack_numpy.patch()
 
 #````````````````````````````Globals``````````````````````````````````````````
-SecDateTime, SecParagraph = 0,1
-Nano = 1000000000
+SecDateTime = 0
+Nano = 0.000000001
 #````````````````````````````Helper functions`````````````````````````````````
 def _printTime(): return time.strftime("%m%d:%H%M%S")
 def _printi(msg): print(f'INFO_AS@{_printTime()}: {msg}')
@@ -73,6 +63,7 @@ class apstrim():
     def __init__(self, publisher, devPars:list, sectionInterval=60.
     , compress=False, quiet=False, use_single_float=True):
         #_printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+        self.lock = threading.Lock()
         self.publisher = publisher
         self.devPars = devPars
         self.sectionInterval = sectionInterval
@@ -94,7 +85,10 @@ class apstrim():
             self.abstractSection['compression'] = 'None'
         _printi(f'Abstract section: {self.abstractSection}')
 
-        # create section Abbreviations
+        # a section has to be created before subscription
+        self._create_logSection()
+
+        # subscribe to parameters
         self.pars = {}
         for i,pname in enumerate(self.devPars):
             devPar = tuple(pname.rsplit(':',1))
@@ -108,7 +102,6 @@ class apstrim():
         self.abbreviationSection = msgpack.packb({'parameters':self.pars}
         , use_single_float=self.use_single_float)
 
-        self.lock = threading.Lock()
 
     def start(self, fileName='apstrim.aps'):
         """Start streaming of the data objects to logbook file.
@@ -153,7 +146,7 @@ class apstrim():
         Called when the requested data have been changed.
         args is a map of delivered objects."""
         #print(f'delivered: {args}')
-        timestampedMap = {}
+        #self.timestampedMap = {}
         for devPar,props in args[0].items():
             #print(f'devPar: {devPar,props}, {type(devPar)}')
             try:
@@ -163,10 +156,10 @@ class apstrim():
                 value = props['value']
                 timestamp = props.get('timestamp')# valid in EPICS and LITE
                 if timestamp == None:# decode ADO timestamp 
-                    timestamp = int(props['timestampSeconds']*Nano
+                    timestamp = int(props['timestampSeconds']/Nano
                     + props['timestampNanoSeconds'])
                 else:
-                    timestamp = int(timestamp*Nano)
+                    timestamp = int(timestamp/Nano)
                 skey = self.pars[dev+':'+par][0]
               elif devPar == 'ppmuser':# ADO has extra item, skip it.
                 continue
@@ -179,7 +172,7 @@ class apstrim():
                         timestamp = int(pars[par]['t'])
                     except: # try old LITE packing
                         value = pars[par]['value']                     
-                        timestamp = int(pars[par]['timestamp']*Nano)
+                        timestamp = int(pars[par]['timestamp']/Nano)
                     skey = self.pars[devPar+':'+par][0]
             except Exception as e:
                 _printw(f'exception in unpacking: {e}')
@@ -193,45 +186,50 @@ class apstrim():
                         value = value.astype('float32')
                     #print(f'Numpy f64->f32 reduction time: {round(timer()-ts,6)}')
                 except:    pass
-
-            if timestamp in timestampedMap:
-                timestampedMap[timestamp][skey] = value
+            #print(f'ts:{timestamp}, keys:{self.timestampedMap.keys()}')
+            #print(f'ts:{timestamp}, tsMap:{self.timestampedMap}')
+            if timestamp in self.timestampedMap:
+                #print(f'add to self.timestampedMap: {timestamp,skey}')
+                self.timestampedMap[timestamp][skey] = value
             else:
-                timestampedMap[timestamp] = {skey:value}
-        #TODO: timestampedMap may need sorting
-        #print(f'timestampedMap: {timestampedMap}')
-        with self.lock:
-            try:
-                self.logParagraph.append(list(timestampedMap.items())[0])
-            except Exception as e:
-                _printe(f'Exception in _delivered for {args}: {e}')
+                #print(f'    create entry in self.timestampedMap: {timestamp,skey}')
+                self.timestampedMap[timestamp] = {skey:value}
+            #print(f'devPar {devPar}@{timestamp}, tsMap: {self.timestampedMap[timestamp].keys()}')
+        #TODO: self.timestampedMap may need sorting
+        #print(f'self.timestampedMap: {self.timestampedMap}')
         
     def _create_logSection(self):
       with self.lock:
-        self.logParagraph = []
-        key = time.strftime("%y%m%d:%H%M%S")
-        self.logSection = (key, self.logParagraph)
+        #print('create empty list of paragraphs')
+        self.sectionKey = time.strftime("%y%m%d:%H%M%S")
+        self.timestampedMap = {}
 
     def _serialize_sections(self):
         #_printi('serialize_sections started')
         periodic_update = time.time()
-        stat = [0, 0, 0]
+        statistics = [0, 0, 0, 0]#
+        NSections, NParagraphs, BytesRaw, BytesFinal = 0,1,2,3
         try:
           while not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
-            if len(self.logSection[SecParagraph]) == 0:
+            if len(self.timestampedMap) == 0:
                 continue
 
-            #print(f'write section {self.logSection}')
+            #print(f'section is ready, write it to logbook {self.logSection}')
+            statistics[NSections] += 1
+            with self.lock:
+                paragraphs = list(self.timestampedMap.items())
+                self.logSection = (self.sectionKey, paragraphs)
+                #print(f'section:{self.logSection}')
             packed = msgpack.packb(self.logSection
             , use_single_float=self.use_single_float)
-            stat[0] += len(self.logSection[SecParagraph])
-            stat[1] += len(packed)
+            statistics[NParagraphs] += len(paragraphs)
+            statistics[BytesRaw] += len(packed)
             if self.compress is not None:
                 compressed = self.compress(packed)
                 packed = msgpack.packb(compressed
                 , use_single_float=self.use_single_float)
-            stat[2] += len(packed)    
+            statistics[BytesFinal] += len(packed)    
             self.logbook.write(packed)
             self.logbook.flush()
 
@@ -242,12 +240,16 @@ class apstrim():
                 periodic_update = timestamp
                 if not self.quiet:
                     print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged'
-                    f' {stat[0]} paragraphs, {stat[2]/1000.} KBytes')
+                    f' {statistics[NSections]} sections,'
+                    f' {statistics[NParagraphs]} paragraphs,'
+                    f' {statistics[BytesFinal]/1000.} KBytes')
         except Exception as e:
             print(f'ERROR: Exception in serialize_sections: {e}')
-        msg = f'Logging finished for {stat[0]} paragraphs, {stat[2]/1000.} KB.'
+        msg = (f'Logging finished for {statistics[NSections]} sections,'
+        f' {statistics[NParagraphs]} paragraphs,'
+        f' {statistics[BytesFinal]/1000.} KB.')
         if self.compress is not None:
-            msg += f' Compression ratio:{round(stat[1]/stat[2],2)}'
+            msg += f' Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}'
         print(msg)
         self.logbook.close()
                 
