@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '1.1.2 2021-07-19'# random-access-ready
+__version__ = '1.2.0 2021-07-19'# random-access-ready, bug __printe fixed
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -103,14 +103,20 @@ class apstrim():
 
         # subscribe to parameters
         self.pars = {}
-        for i,pname in enumerate(self.devPars):
+        #for i,pname in enumerate(self.devPars):
+        i = 0
+        for pname in self.devPars:
             devPar = tuple(pname.rsplit(':',1))
             try:
                 self.publisher.subscribe(self._delivered, devPar)
-            except Exception as e:
-                __printe(f'Subscription failed for {pname}: {e}')
+            except:# Exception as e:
+                _printe(f'Could not subscribe  for {pname}')#: {e}')
                 continue
             self.pars[pname] = [shortkey(i)]
+            i += 1
+        if len(self.pars) == 0:
+            _printe(f'Could not build the list of parameters')
+            sys,exit()
         _printi(f'parameters: {self.pars}')
 
         self.abbreviationSection = msgpack.packb({'abbreviations':self.pars}
@@ -137,12 +143,11 @@ class apstrim():
         self.logbook = open(fileName, 'wb')
 
         # write a preliminary 'Table of contents' section
-        self.contentsSection = {'contents':{'size':self.dirSize}, 'data':{}}
-        self.dataContents = self.contentsSection['data']
-        self.logbook.write(msgpack.packb(self.contentsSection))
-
-        # skip the 'Table of contents' zone of the logbook
         if self.dirSize:
+            self.contentsSection = {'contents':{'size':self.dirSize}, 'data':{}}
+            self.dataContents = self.contentsSection['data']
+            self.logbook.write(msgpack.packb(self.contentsSection))
+            # skip the 'Table of contents' zone of the logbook
             self.logbook.seek(self.dirSize)
 
         # write the sections Abstract and Abbreviations
