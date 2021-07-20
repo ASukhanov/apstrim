@@ -4,19 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
-## [Unreleased] - 2021-07-17
+## [1.1.2] - 2021-07-20
  
 ### Added
 
-Section count.
+Table of contents to provide for random-access retrieval.
+Downsampling of the table of contents in case of too many sections.
+Section count, Verbosity, 
  
 ### Changed 
 
-logParagraphs removed, the timestampedMap is converted to list when section is ready.
+logParagraphs removed, the timestampedMap is converted to list when 
+section is ready.
+Sections renamed: -> contents, parameters -> Abbreviations
 
 ### Fixed
 
-Joining of paragraphs
+Joining of paragraphs.
+File positioning prior to construction of the Unpacker.
 
 ## [1.1.1] - 2021-06-23
   

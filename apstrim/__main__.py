@@ -5,7 +5,6 @@ import sys, argparse
 from .apstrim  import apstrim 
 
 def main():
-    
     # parse common arguments
     parser = argparse.ArgumentParser(description=Description)
     parser.add_argument('-c', '--compress', action='store_true', help=\
