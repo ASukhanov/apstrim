@@ -4,7 +4,7 @@ Logger of Control System parameters and data objects. Analog of SDDS writer.
 - Supported infrastructures: ADO, EPICS, LITE.
 - Efficient binary serialization format.
 - Like JSON. But it's faster and smaller.
-- Rando-access object retrieval,
+- Random-access retrieval of objects from selected time interval,
 - Numpy arrays supported.
 - Optional online compression.
 - Basic plotting of the logged data.
@@ -53,7 +53,6 @@ Serialization
 	...
 	# Compression ratio = 1.9
 
-Example of deserialization and plotting of all parameters in all logged data 
-files.
+Example of deserialization and plotting of all parameters from several logbooks.
 
     python -m apstrim.view -i all -v -p *.aps
