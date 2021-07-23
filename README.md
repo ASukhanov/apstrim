@@ -1,21 +1,22 @@
 # apstrim
-Logger of Control System parameters and data objects. Analog of SDDS writer.
+Logger and extractor of Control System parameters (a.c.a EPICS PVs). 
+Analog of SDDS writer.
 
 - Supported infrastructures: ADO, EPICS, LITE.
 - Efficient binary serialization format.
 - Like JSON. But it's faster and smaller.
-- Random-access retrieval of objects from selected time interval,
+- Random-access retrieval of objects from selected time interval.
 - Numpy arrays supported.
-- Optional online compression.
+- Fast online compression.
 - Basic plotting of the logged data.
 
 ## Installation
-Dependencies: **msgpack, msgpack-numpy, caproto**. 
+Dependencies: **msgpack, msgpack-numpy, caproto, lz4framed**. 
 These packages will be installed using pip:
 
     pip3 install apstrim
 
-The example program for deserialization and plotting **apstrim.plot**
+The example program for deserialization and plotting **apstrim.view**,
 requires additional package: **pyqtgraph**.
 
 ## Examples
