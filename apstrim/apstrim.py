@@ -59,8 +59,7 @@ class apstrim():
     dirSize:    size of the table of contents, which is usd for random-access
                 retrieval. If 0 then no table will be created.
         Class properties:
-    eventExit:  is a threading.Event, which will be set when application
-     is about to exit.
+    eventExit:  Is a threading.Event, which will be set for safe exit.
     Verbosity:  Show more log messages
     """
     eventExit = threading.Event()

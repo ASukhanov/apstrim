@@ -4,9 +4,10 @@ Logger of Control System parameters and data objects. Analog of SDDS writer.
 - Supported infrastructures: ADO, EPICS, LITE.
 - Efficient binary serialization format.
 - Like JSON. But it's faster and smaller.
+- Rando-access object retrieval,
 - Numpy arrays supported.
 - Optional online compression.
-- Basic plotting of logged data.
+- Basic plotting of the logged data.
 
 ## Installation
 Dependencies: **msgpack, msgpack-numpy, caproto**. 
@@ -40,7 +41,7 @@ Serialization
     :python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV,WaveForm_RBV
     21-06-19 11:04:58 Logged 122 paragraphs, 492.682 KBytes
 	...
-	# Note, Compression is very poor for vector parameters
+	# Note, Compression is poor for floating point arrays with high entropy.
 
 	python -m apstrim -nLITE liteHost:dev1:cycle
 	pars: {'acnlin23:dev1:cycle': ['0']}
@@ -52,12 +53,7 @@ Serialization
 	...
 	# Compression ratio = 1.9
 
-    :python -m apstrim -nLITE liteHost:dev1:cycle,y
-    pars: {'acnlin23:dev1:cycle': ['0'], 'acnlin23:dev1:y': ['1']}
-	21-06-19 10:57:30 Logged 5743 paragraphs, 46247.198 KBytes
-    ...
+Example of deserialization and plotting of all parameters in all logged data 
+files.
 
-
-Example of deserialization and plotting of the logged data files.
-
-    python -m apstrim.plot *.aps
+    python -m apstrim.view -i all -v -p *.aps
