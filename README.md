@@ -19,6 +19,12 @@ These packages will be installed using pip:
 The example program for deserialization and plotting **apstrim.view**,
 requires additional package: **pyqtgraph**.
 
+## API refrerence
+
+[apstrim](https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html)
+
+[scan](https://github.com/ASukhanov/apstrim/blob/main/html/scan.)
+
 ## Examples
 
 Serialization
