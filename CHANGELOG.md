@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [1.3.1] - 2021-07-26
+Docstrings have been updated.
+
+### Added
+
+API reference in **html**.
+
+## [1.3.0] - 2021-07-22
+
+### Added
+
+The apstrim.plot.py have been replaced by two files: apstrim.scan.py and 
+apstrim.view.py. 
+
 ## [1.2.0] - 2021-07-20
 
 ### Added

@@ -8,7 +8,7 @@ import numpy as np
 import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
-__version__ = 'v1.3.0 2021-07-22'
+__version__ = 'v1.3.1 2021-07-26'# Docstring updated
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -37,7 +37,8 @@ def _timeInterval(startTime, span):
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 #````````````````````````````class APView`````````````````````````````````````
 class APScan():
-    Verbosity = 0# Verbosity level
+    Verbosity = 0
+    """Show dedugging messages."""
 
     def __init__(self, fileName):
         """Open logbook fileName, unpack headers, position file to data sections."""
@@ -93,13 +94,20 @@ class APScan():
         , 'Abbreviations':self.key2par}
 
     def extract_objects(self, span=0., items=[], startTime=None):
-        """Returns correlated dict of times and values of logged items during
-        selected time interval.
-        span:   Duration of time interval in seconds, set it 0 for whole logbook.
-        items:  List of items to extract. Item are coded with keys. 
-                The mapping of Process Variables (PV) is in self.par2key map.
-                The reversed mapping is in self.key2par map.
-        startTime: String for selecting start of the time interval. 
+        """
+        Returns correlated dict of times and values of the logged items during
+        the selected time interval.
+        
+        **span**:   Time interval for data extraction in seconds. If 0, then the
+        		data will be extracted starting from the startTime and ending 
+        		at the end of the logbook.
+        
+        **items**:  List of items to extract. Item are coded with keys. 
+                The mapping of the Process Variables (PV) could be found in
+                the self.par2key map. The reversed mapping is in the 
+                self.key2par map.
+        
+        **startTime**: String for selecting start of the extraction interval. 
                 Format: YYMMDD_HHMMSS. Set it to None for the logbook beginning. 
                 """
         extracted = {}

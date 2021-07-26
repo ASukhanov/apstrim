@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '1.2.0 2021-07-19'# random-access-ready, bug __printe fixed
+__version__ = '1.3.1 2021-07-26'# docstrings updated
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -35,12 +35,12 @@ def _printd(msg):
     if apstrim.Verbosity>0:
         print(f'DBG_AS: {msg}')
 
-def croppedText(txt, limit=200):
+def _croppedText(txt, limit=200):
     if len(txt) > limit:
         txt = txt[:limit]+'...'
     return txt
 
-def shortkey(i:int):
+def _shortkey(i:int):
     """Return string with max 2 characters, mapping i (i<1296)"""
     s = string.digits + string.ascii_lowercase
     l = len(s)
@@ -49,25 +49,32 @@ def shortkey(i:int):
 
 #````````````````````````````Serializer class`````````````````````````````````
 class apstrim():
-    """Create the object streamer. 
-    publisher:  is a class, providing a subscribe() method,
-    devPar:     list of device:parameter strings,
-    sectionInterval: time between writing of the logBook sections
-    compression:    compression enable flag,
-    quiet:      do not print section writing progress,
-    use_single_float: Use single precision float type for float. (default: True)
-    dirSize:    size of the table of contents, which is usd for random-access
-                retrieval. If 0 then no table will be created.
-        Class properties:
-    eventExit:  Is a threading.Event, which will be set for safe exit.
-    Verbosity:  Show more log messages
     """
-    eventExit = threading.Event()
-    _eventStop = threading.Event()
+    Create an object streamer.
+    
+    **publisher**:  Is a class, providing a subscribe() method.
+    
+    **devPar**:     List of device:parameter strings.
+    
+    **sectionInterval**: 	Data collection interval for data sections.
+    
+    **compression**:    	Enable Compression flag.
+    
+    **quiet**:      		Do not print the section writing progress,
+    
+    **use_single_float**: 	Use single precision float type for float. (default: True)
+    
+    **dirSize**:    Size of a Table Of Contents, which is used for random-access
+                retrieval. If 0, then no table will be created.
+"""
+    EventExit = threading.Event()
+    """Calling the EventExit.set() will safely exit the application."""
     Verbosity = 0
+    """Show dedugging messages."""
+    _eventStop = threading.Event()
 
     def __init__(self, publisher, devPars:list, sectionInterval=60.
-    , compress=False, quiet=False, use_single_float=True, dirSize=0):
+    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
         #_printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
         signal.signal(signal.SIGINT, _safeExit)
         signal.signal(signal.SIGTERM, _safeExit)
@@ -111,7 +118,7 @@ class apstrim():
             except:# Exception as e:
                 _printe(f'Could not subscribe  for {pname}')#: {e}')
                 continue
-            self.pars[pname] = [shortkey(i)]
+            self.pars[pname] = [_shortkey(i)]
             i += 1
         if len(self.pars) == 0:
             _printe(f'Could not build the list of parameters')
@@ -122,7 +129,7 @@ class apstrim():
         , use_single_float=self.use_single_float)
 
     def start(self, fileName='apstrim.aps'):
-        """Start streaming of the data objects to logbook file.
+        """Start the streaming of the data objects to the logbook file.
         If file is already exists then it will be renamed and
         a new file will be open with the provided name.
         """
@@ -198,7 +205,7 @@ class apstrim():
                     try:
                         value = pars[par]['v']
                         timestamp = int(pars[par]['t'])
-                    except: # try old LITE packing
+                    except: # try an old LITE packing
                         value = pars[par]['value']                     
                         timestamp = int(pars[par]['timestamp']/Nano)
                     skey = self.pars[devPar+':'+par][0]
@@ -217,7 +224,7 @@ class apstrim():
             #print(f'ts:{timestamp}, keys:{self.timestampedMap.keys()}')
             #print(f'ts:{timestamp}, tsMap:{self.timestampedMap}')
             if timestamp in self.timestampedMap:
-                #print(f'add to self.timestampedMap: {timestamp,skey}')
+                #print(f'add to timestampedMap: {timestamp,skey}')
                 self.timestampedMap[timestamp][skey] = value
             else:
                 #print(f'    create entry in self.timestampedMap: {timestamp,skey}')
@@ -243,11 +250,9 @@ class apstrim():
             if len(self.timestampedMap) == 0:
                 continue
 
-            # register the section in the table of contents, this should be skipped
-            # for some entries when the contents downsampling is active.
+            # register the section in the table of contents,
+            # this should be skipped when the contents downsampling is active.
             if self.dirSize:
-                #offset = statistics[BytesRaw] + self.dirSize
-                #self.dataContents[self.sectionKey] = offset
                 rf = self.contents_downsampling_factor
                 if rf <=1 or (statistics[NSections]%rf) == 0:
                     self.dataContents[self.sectionKey] = self.logbook.tell()
@@ -265,8 +270,7 @@ class apstrim():
                         _printd(f'downsampled contentsSection:{self.contentsSection}')
                         self.packedContents = msgpack.packb(self.contentsSection)
 
-            #print(f'section is ready, write it to logbook {self.logSection}')
-            _printd(f'writing section {statistics[NSections]} @ {self.logbook.tell()}')
+            _printd(f'section {statistics[NSections]} is ready write it to logbook @ {self.logbook.tell()}')
             statistics[NSections] += 1
             with self.lock:
                 paragraphs = list(self.timestampedMap.items())
@@ -297,7 +301,7 @@ class apstrim():
         except Exception as e:
             print(f'ERROR: Exception in serialize_sections: {e}')
 
-        # logging finished
+        # logging is finished
         # rewrite the contentsSection
         if self.dirSize:
             self.logbook.seek(0)
@@ -315,6 +319,6 @@ class apstrim():
 def _safeExit(_signo, _stack_frame):
     print('safeExit')
     apstrim._eventStop.set()
-    apstrim.eventExit.set()
+    apstrim.EventExit.set()
     
                 

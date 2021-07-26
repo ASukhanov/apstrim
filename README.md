@@ -23,7 +23,6 @@ requires additional package: **pyqtgraph**.
 
 Serialization
 
-
 	:python -m apstrim -nEPICS testAPD:scope1:MeanValue_RBV
 	pars: {'testAPD:scope1:MeanValue_RBV': ['0']}
 	21-06-19 11:06:57 Logged 61 paragraphs, 1.36 KBytes

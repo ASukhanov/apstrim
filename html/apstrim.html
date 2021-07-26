@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>apstrim API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>apstrim</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># Copyright (c) 2021 Andrei Sukhanov. All rights reserved.
+#
+# Licensed under the MIT License, (the &#34;License&#34;);
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
+#
+__version__ = &#39;1.2.0 2021-07-19&#39;# random-access-ready, bug __printe fixed
+
+#TODO: consider to replace msgpack_numpy with something simple and predictable.
+#The use_single_float has no efect in msgPack,
+#TODO: check how ints are handled: ideally they should be dynamically
+#converted to int8,int16,int32 or int64 depending of its value.
+
+import sys, time, string, copy
+import os, pathlib, datetime
+import threading
+import signal
+#from timeit import default_timer as timer
+
+import numpy as np
+import msgpack
+import msgpack_numpy
+msgpack_numpy.patch()
+
+#````````````````````````````Globals``````````````````````````````````````````
+Nano = 0.000000001
+#````````````````````````````Helper functions`````````````````````````````````
+def _printTime(): return time.strftime(&#34;%m%d:%H%M%S&#34;)
+def _printi(msg): print(f&#39;INFO_AS@{_printTime()}: {msg}&#39;)
+def _printw(msg): print(f&#39;WARN_AS@{_printTime()}: {msg}&#39;)
+def _printe(msg): print(f&#39;ERROR_AS@{_printTime()}: {msg}&#39;)
+def _printd(msg):
+    if apstrim.Verbosity&gt;0:
+        print(f&#39;DBG_AS: {msg}&#39;)
+
+def _croppedText(txt, limit=200):
+    if len(txt) &gt; limit:
+        txt = txt[:limit]+&#39;...&#39;
+    return txt
+
+def _shortkey(i:int):
+    &#34;&#34;&#34;Return string with max 2 characters, mapping i (i&lt;1296)&#34;&#34;&#34;
+    s = string.digits + string.ascii_lowercase
+    l = len(s)
+    quotient,reminder = divmod(i,l)
+    return s[i] if quotient==0 else s[quotient]+s[reminder]
+
+#````````````````````````````Serializer class`````````````````````````````````
+class apstrim():
+    &#34;&#34;&#34;
+    Create an object streamer.
+    
+    **publisher**:  Is a class, providing a subscribe() method.
+    
+    **devPar**:     List of device:parameter strings.
+    
+    **sectionInterval**:        Data collection interval for data sections.
+    
+    **compression**:            Enable Compression flag.
+    
+    **quiet**:                  Do not print the section writing progress,
+    
+    **use_single_float**:       Use single precision float type for float. (default: True)
+    
+    **dirSize**:    Size of a Table Of Contents, which is used for random-access
+                retrieval. If 0, then no table will be created.
+&#34;&#34;&#34;
+    eventExit = threading.Event()
+    &#34;&#34;&#34;Calling the event.Exit.set() will safely exit the application.&#34;&#34;&#34;
+    Verbosity = 0
+    &#34;&#34;&#34;Show dedugging messages.&#34;&#34;&#34;
+    _eventStop = threading.Event()
+
+    def __init__(self, publisher, devPars:list, sectionInterval=60.
+    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
+        #_printi(f&#39;apstrim  {__version__}, sectionInterval {sectionInterval}&#39;)
+        signal.signal(signal.SIGINT, _safeExit)
+        signal.signal(signal.SIGTERM, _safeExit)
+
+        self.lock = threading.Lock()
+        self.publisher = publisher
+        self.devPars = devPars
+        self.sectionInterval = sectionInterval
+        self.quiet = quiet
+        self.use_single_float = use_single_float
+
+        # table of contents - related variables
+        self.dirSize = dirSize
+        self.contents_downsampling_factor = 1# No downsampling 
+
+        # create a section Abstract
+        self.abstractSection = {&#39;abstract&#39;:{&#39;apstrim &#39;:__version__
+        , &#39;sectionInterval&#39;:sectionInterval}}
+        abstract = self.abstractSection[&#39;abstract&#39;]
+
+        if compress:
+            import lz4framed
+            self.compress = lz4framed.compress
+            abstract[&#39;compression&#39;] = &#39;lz4framed&#39;
+        else:
+            self.compress = None
+            abstract[&#39;compression&#39;] = &#39;None&#39;
+        _printi(f&#39;Abstract section: {self.abstractSection}&#39;)
+
+        # a section has to be created before subscription
+        self._create_logSection()
+
+        # subscribe to parameters
+        self.pars = {}
+        #for i,pname in enumerate(self.devPars):
+        i = 0
+        for pname in self.devPars:
+            devPar = tuple(pname.rsplit(&#39;:&#39;,1))
+            try:
+                self.publisher.subscribe(self._delivered, devPar)
+            except:# Exception as e:
+                _printe(f&#39;Could not subscribe  for {pname}&#39;)#: {e}&#39;)
+                continue
+            self.pars[pname] = [_shortkey(i)]
+            i += 1
+        if len(self.pars) == 0:
+            _printe(f&#39;Could not build the list of parameters&#39;)
+            sys,exit()
+        _printi(f&#39;parameters: {self.pars}&#39;)
+
+        self.abbreviationSection = msgpack.packb({&#39;abbreviations&#39;:self.pars}
+        , use_single_float=self.use_single_float)
+
+    def start(self, fileName=&#39;apstrim.aps&#39;):
+        &#34;&#34;&#34;Start the streaming of the data objects to logbook file.
+        If file is already exists then it will be renamed and
+        a new file will be open with the provided name.
+        &#34;&#34;&#34;
+        self._eventStop.clear()
+        try:
+            modificationTime = pathlib.Path(fileName).stat().st_mtime
+            dt = datetime.datetime.fromtimestamp(modificationTime)
+            suffix = dt.strftime(&#39;_%Y%m%d_%H%M&#39;) 
+            try:    fname,ext = fileName.rsplit(&#39;.&#39;,1)
+            except:    fname,ext = fileName,&#39;&#39;
+            otherName = fname + suffix + &#39;.&#39; + ext
+            os.rename(fileName, otherName)
+            _printw(f&#39;Existing file {fileName} have been renamed to {otherName}&#39;)
+        except Exception as e:
+            pass
+
+        self.logbook = open(fileName, &#39;wb&#39;)
+
+        # write a preliminary &#39;Table of contents&#39; section
+        if self.dirSize:
+            self.contentsSection = {&#39;contents&#39;:{&#39;size&#39;:self.dirSize}, &#39;data&#39;:{}}
+            self.dataContents = self.contentsSection[&#39;data&#39;]
+            self.logbook.write(msgpack.packb(self.contentsSection))
+            # skip the &#39;Table of contents&#39; zone of the logbook
+            self.logbook.seek(self.dirSize)
+
+        # write the sections Abstract and Abbreviations
+        _printd(f&#39;write Abstract@{self.logbook.tell()}&#39;)
+        self.logbook.write(msgpack.packb(self.abstractSection
+        , use_single_float=self.use_single_float))
+        _printd(f&#39;write Abbreviations@{self.logbook.tell()}&#39;)
+        self.logbook.write(self.abbreviationSection)
+
+        self._create_logSection()
+
+        #_printi(&#39;starting serialization  thread&#39;)
+        myThread = threading.Thread(target=self._serialize_sections)
+        myThread.start()
+
+        _printi(f&#39;Logbook file: {fileName} created&#39;)
+
+    def stop(self):
+        &#34;&#34;&#34;Stop the streaming.&#34;&#34;&#34;
+        self._eventStop.set()
+        #self.logbook.close()
+
+    def _delivered(self, *args):
+        &#34;&#34;&#34;Callback, specified in the subscribe() request. 
+        Called when the requested data have been changed.
+        args is a map of delivered objects.&#34;&#34;&#34;
+        #print(f&#39;delivered: {args}&#39;)
+        #self.timestampedMap = {}
+        for devPar,props in args[0].items():
+            #print(f&#39;devPar: {devPar,props}, {type(devPar)}&#39;)
+            try:
+              if isinstance(devPar, tuple):
+                # EPICS and ADO packing
+                dev,par = devPar
+                value = props[&#39;value&#39;]
+                timestamp = props.get(&#39;timestamp&#39;)# valid in EPICS and LITE
+                if timestamp == None:# decode ADO timestamp 
+                    timestamp = int(props[&#39;timestampSeconds&#39;]/Nano
+                    + props[&#39;timestampNanoSeconds&#39;])
+                else:
+                    timestamp = int(timestamp/Nano)
+                skey = self.pars[dev+&#39;:&#39;+par][0]
+              elif devPar == &#39;ppmuser&#39;:# ADO has extra item, skip it.
+                continue
+              else:
+                #LITE packing:
+                pars = props
+                for par in pars:
+                    try:
+                        value = pars[par][&#39;v&#39;]
+                        timestamp = int(pars[par][&#39;t&#39;])
+                    except: # try an old LITE packing
+                        value = pars[par][&#39;value&#39;]                     
+                        timestamp = int(pars[par][&#39;timestamp&#39;]/Nano)
+                    skey = self.pars[devPar+&#39;:&#39;+par][0]
+            except Exception as e:
+                _printw(f&#39;exception in unpacking: {e}&#39;)
+                continue
+
+            if self.use_single_float:
+                # Changing numpy float64 to float32 halves the data volume
+                #ts = timer()
+                try:    
+                    if value.dtype==&#39;float64&#39;:
+                        value = value.astype(&#39;float32&#39;)
+                    #print(f&#39;Numpy f64-&gt;f32 downsampling time: {round(timer()-ts,6)}&#39;)
+                except:    pass
+            #print(f&#39;ts:{timestamp}, keys:{self.timestampedMap.keys()}&#39;)
+            #print(f&#39;ts:{timestamp}, tsMap:{self.timestampedMap}&#39;)
+            if timestamp in self.timestampedMap:
+                #print(f&#39;add to timestampedMap: {timestamp,skey}&#39;)
+                self.timestampedMap[timestamp][skey] = value
+            else:
+                #print(f&#39;    create entry in self.timestampedMap: {timestamp,skey}&#39;)
+                self.timestampedMap[timestamp] = {skey:value}
+            #print(f&#39;devPar {devPar}@{timestamp}, tsMap: {self.timestampedMap[timestamp].keys()}&#39;)
+        #TODO: self.timestampedMap may need sorting
+        #print(f&#39;self.timestampedMap: {self.timestampedMap}&#39;)
+        
+    def _create_logSection(self):
+      with self.lock:
+        #print(&#39;create empty list of paragraphs&#39;)
+        self.sectionKey = time.strftime(&#34;%y%m%d_%H%M%S&#34;)
+        self.timestampedMap = {}
+
+    def _serialize_sections(self):
+        #_printi(&#39;serialize_sections started&#39;)
+        periodic_update = time.time()
+        statistics = [0, 0, 0, 0]#
+        NSections, NParagraphs, BytesRaw, BytesFinal = 0,1,2,3
+        try:
+          while not self._eventStop.is_set():
+            self._eventStop.wait(self.sectionInterval)
+            if len(self.timestampedMap) == 0:
+                continue
+
+            # register the section in the table of contents,
+            # this should be skipped when the contents downsampling is active.
+            if self.dirSize:
+                rf = self.contents_downsampling_factor
+                if rf &lt;=1 or (statistics[NSections]%rf) == 0:
+                    self.dataContents[self.sectionKey] = self.logbook.tell()
+                    packed = msgpack.packb(self.contentsSection)
+                    if len(packed) &lt; self.dirSize:
+                        self.packedContents = packed
+                    else:
+                        _printw((f&#39;The contents size is too small for&#39;
+                        f&#39; {len(packed)} bytes. Half of the entries will be&#39;
+                        &#39; removed to allow for more entries.}&#39;))
+                        self.contents_downsampling_factor *= 2
+                        downsampled_contents = dict(list(self.dataContents.items())\
+                          [::self.contents_downsampling_factor])
+                        self.contentsSection[&#39;data&#39;] = downsampled_contents
+                        _printd(f&#39;downsampled contentsSection:{self.contentsSection}&#39;)
+                        self.packedContents = msgpack.packb(self.contentsSection)
+
+            _printd(f&#39;section {statistics[NSections]} is ready write it to logbook @ {self.logbook.tell()}&#39;)
+            statistics[NSections] += 1
+            with self.lock:
+                paragraphs = list(self.timestampedMap.items())
+                self.logSection = (self.sectionKey, paragraphs)
+                #print(f&#39;section:{self.logSection}&#39;)
+            packed = msgpack.packb(self.logSection
+            , use_single_float=self.use_single_float)
+            statistics[NParagraphs] += len(paragraphs)
+            statistics[BytesRaw] += len(packed)
+            if self.compress is not None:
+                compressed = self.compress(packed)
+                packed = msgpack.packb(compressed
+                , use_single_float=self.use_single_float)
+            statistics[BytesFinal] += len(packed)
+            self.logbook.write(packed)
+            self.logbook.flush()
+
+            self._create_logSection()
+            timestamp = time.time()
+            dt = timestamp - periodic_update
+            if dt &gt; 10.:
+                periodic_update = timestamp
+                if not self.quiet:
+                    print(f&#39;{time.strftime(&#34;%y-%m-%d %H:%M:%S&#34;)} Logged&#39;
+                    f&#39; {statistics[NSections]} sections,&#39;
+                    f&#39; {statistics[NParagraphs]} paragraphs,&#39;
+                    f&#39; {statistics[BytesFinal]/1000.} KBytes&#39;)
+        except Exception as e:
+            print(f&#39;ERROR: Exception in serialize_sections: {e}&#39;)
+
+        # logging is finished
+        # rewrite the contentsSection
+        if self.dirSize:
+            self.logbook.seek(0)
+            self.logbook.write(self.packedContents)
+
+        # print status
+        msg = (f&#39;Logging finished for {statistics[NSections]} sections,&#39;
+        f&#39; {statistics[NParagraphs]} paragraphs,&#39;
+        f&#39; {statistics[BytesFinal]/1000.} KB.&#39;)
+        if self.compress is not None:
+            msg += f&#39; Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}&#39;
+        print(msg)
+        self.logbook.close()
+                
+def _safeExit(_signo, _stack_frame):
+    print(&#39;safeExit&#39;)
+    apstrim._eventStop.set()
+    apstrim.eventExit.set()
+    
+                </code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="apstrim.apstrim"><code class="flex name class">
+<span>class <span class="ident">apstrim</span></span>
+<span>(</span><span>publisher, devPars: list, sectionInterval=60.0, compress=False, quiet=False, use_single_float=True, dirSize=10240)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Create an object streamer.</p>
+<p><strong>publisher</strong>:
+Is a class, providing a subscribe() method.</p>
+<p><strong>devPar</strong>:
+List of device:parameter strings.</p>
+<p><strong>sectionInterval</strong>:
+Data collection interval for data sections.</p>
+<p><strong>compression</strong>:
+Enable Compression flag.</p>
+<p><strong>quiet</strong>:
+Do not print the section writing progress,</p>
+<p><strong>use_single_float</strong>:
+Use single precision float type for float. (default: True)</p>
+<p><strong>dirSize</strong>:
+Size of a Table Of Contents, which is used for random-access
+retrieval. If 0, then no table will be created.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class apstrim():
+    &#34;&#34;&#34;
+    Create an object streamer.
+    
+    **publisher**:  Is a class, providing a subscribe() method.
+    
+    **devPar**:     List of device:parameter strings.
+    
+    **sectionInterval**:        Data collection interval for data sections.
+    
+    **compression**:            Enable Compression flag.
+    
+    **quiet**:                  Do not print the section writing progress,
+    
+    **use_single_float**:       Use single precision float type for float. (default: True)
+    
+    **dirSize**:    Size of a Table Of Contents, which is used for random-access
+                retrieval. If 0, then no table will be created.
+&#34;&#34;&#34;
+    eventExit = threading.Event()
+    &#34;&#34;&#34;Calling the event.Exit.set() will safely exit the application.&#34;&#34;&#34;
+    Verbosity = 0
+    &#34;&#34;&#34;Show dedugging messages.&#34;&#34;&#34;
+    _eventStop = threading.Event()
+
+    def __init__(self, publisher, devPars:list, sectionInterval=60.
+    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
+        #_printi(f&#39;apstrim  {__version__}, sectionInterval {sectionInterval}&#39;)
+        signal.signal(signal.SIGINT, _safeExit)
+        signal.signal(signal.SIGTERM, _safeExit)
+
+        self.lock = threading.Lock()
+        self.publisher = publisher
+        self.devPars = devPars
+        self.sectionInterval = sectionInterval
+        self.quiet = quiet
+        self.use_single_float = use_single_float
+
+        # table of contents - related variables
+        self.dirSize = dirSize
+        self.contents_downsampling_factor = 1# No downsampling 
+
+        # create a section Abstract
+        self.abstractSection = {&#39;abstract&#39;:{&#39;apstrim &#39;:__version__
+        , &#39;sectionInterval&#39;:sectionInterval}}
+        abstract = self.abstractSection[&#39;abstract&#39;]
+
+        if compress:
+            import lz4framed
+            self.compress = lz4framed.compress
+            abstract[&#39;compression&#39;] = &#39;lz4framed&#39;
+        else:
+            self.compress = None
+            abstract[&#39;compression&#39;] = &#39;None&#39;
+        _printi(f&#39;Abstract section: {self.abstractSection}&#39;)
+
+        # a section has to be created before subscription
+        self._create_logSection()
+
+        # subscribe to parameters
+        self.pars = {}
+        #for i,pname in enumerate(self.devPars):
+        i = 0
+        for pname in self.devPars:
+            devPar = tuple(pname.rsplit(&#39;:&#39;,1))
+            try:
+                self.publisher.subscribe(self._delivered, devPar)
+            except:# Exception as e:
+                _printe(f&#39;Could not subscribe  for {pname}&#39;)#: {e}&#39;)
+                continue
+            self.pars[pname] = [_shortkey(i)]
+            i += 1
+        if len(self.pars) == 0:
+            _printe(f&#39;Could not build the list of parameters&#39;)
+            sys,exit()
+        _printi(f&#39;parameters: {self.pars}&#39;)
+
+        self.abbreviationSection = msgpack.packb({&#39;abbreviations&#39;:self.pars}
+        , use_single_float=self.use_single_float)
+
+    def start(self, fileName=&#39;apstrim.aps&#39;):
+        &#34;&#34;&#34;Start the streaming of the data objects to logbook file.
+        If file is already exists then it will be renamed and
+        a new file will be open with the provided name.
+        &#34;&#34;&#34;
+        self._eventStop.clear()
+        try:
+            modificationTime = pathlib.Path(fileName).stat().st_mtime
+            dt = datetime.datetime.fromtimestamp(modificationTime)
+            suffix = dt.strftime(&#39;_%Y%m%d_%H%M&#39;) 
+            try:    fname,ext = fileName.rsplit(&#39;.&#39;,1)
+            except:    fname,ext = fileName,&#39;&#39;
+            otherName = fname + suffix + &#39;.&#39; + ext
+            os.rename(fileName, otherName)
+            _printw(f&#39;Existing file {fileName} have been renamed to {otherName}&#39;)
+        except Exception as e:
+            pass
+
+        self.logbook = open(fileName, &#39;wb&#39;)
+
+        # write a preliminary &#39;Table of contents&#39; section
+        if self.dirSize:
+            self.contentsSection = {&#39;contents&#39;:{&#39;size&#39;:self.dirSize}, &#39;data&#39;:{}}
+            self.dataContents = self.contentsSection[&#39;data&#39;]
+            self.logbook.write(msgpack.packb(self.contentsSection))
+            # skip the &#39;Table of contents&#39; zone of the logbook
+            self.logbook.seek(self.dirSize)
+
+        # write the sections Abstract and Abbreviations
+        _printd(f&#39;write Abstract@{self.logbook.tell()}&#39;)
+        self.logbook.write(msgpack.packb(self.abstractSection
+        , use_single_float=self.use_single_float))
+        _printd(f&#39;write Abbreviations@{self.logbook.tell()}&#39;)
+        self.logbook.write(self.abbreviationSection)
+
+        self._create_logSection()
+
+        #_printi(&#39;starting serialization  thread&#39;)
+        myThread = threading.Thread(target=self._serialize_sections)
+        myThread.start()
+
+        _printi(f&#39;Logbook file: {fileName} created&#39;)
+
+    def stop(self):
+        &#34;&#34;&#34;Stop the streaming.&#34;&#34;&#34;
+        self._eventStop.set()
+        #self.logbook.close()
+
+    def _delivered(self, *args):
+        &#34;&#34;&#34;Callback, specified in the subscribe() request. 
+        Called when the requested data have been changed.
+        args is a map of delivered objects.&#34;&#34;&#34;
+        #print(f&#39;delivered: {args}&#39;)
+        #self.timestampedMap = {}
+        for devPar,props in args[0].items():
+            #print(f&#39;devPar: {devPar,props}, {type(devPar)}&#39;)
+            try:
+              if isinstance(devPar, tuple):
+                # EPICS and ADO packing
+                dev,par = devPar
+                value = props[&#39;value&#39;]
+                timestamp = props.get(&#39;timestamp&#39;)# valid in EPICS and LITE
+                if timestamp == None:# decode ADO timestamp 
+                    timestamp = int(props[&#39;timestampSeconds&#39;]/Nano
+                    + props[&#39;timestampNanoSeconds&#39;])
+                else:
+                    timestamp = int(timestamp/Nano)
+                skey = self.pars[dev+&#39;:&#39;+par][0]
+              elif devPar == &#39;ppmuser&#39;:# ADO has extra item, skip it.
+                continue
+              else:
+                #LITE packing:
+                pars = props
+                for par in pars:
+                    try:
+                        value = pars[par][&#39;v&#39;]
+                        timestamp = int(pars[par][&#39;t&#39;])
+                    except: # try an old LITE packing
+                        value = pars[par][&#39;value&#39;]                     
+                        timestamp = int(pars[par][&#39;timestamp&#39;]/Nano)
+                    skey = self.pars[devPar+&#39;:&#39;+par][0]
+            except Exception as e:
+                _printw(f&#39;exception in unpacking: {e}&#39;)
+                continue
+
+            if self.use_single_float:
+                # Changing numpy float64 to float32 halves the data volume
+                #ts = timer()
+                try:    
+                    if value.dtype==&#39;float64&#39;:
+                        value = value.astype(&#39;float32&#39;)
+                    #print(f&#39;Numpy f64-&gt;f32 downsampling time: {round(timer()-ts,6)}&#39;)
+                except:    pass
+            #print(f&#39;ts:{timestamp}, keys:{self.timestampedMap.keys()}&#39;)
+            #print(f&#39;ts:{timestamp}, tsMap:{self.timestampedMap}&#39;)
+            if timestamp in self.timestampedMap:
+                #print(f&#39;add to timestampedMap: {timestamp,skey}&#39;)
+                self.timestampedMap[timestamp][skey] = value
+            else:
+                #print(f&#39;    create entry in self.timestampedMap: {timestamp,skey}&#39;)
+                self.timestampedMap[timestamp] = {skey:value}
+            #print(f&#39;devPar {devPar}@{timestamp}, tsMap: {self.timestampedMap[timestamp].keys()}&#39;)
+        #TODO: self.timestampedMap may need sorting
+        #print(f&#39;self.timestampedMap: {self.timestampedMap}&#39;)
+        
+    def _create_logSection(self):
+      with self.lock:
+        #print(&#39;create empty list of paragraphs&#39;)
+        self.sectionKey = time.strftime(&#34;%y%m%d_%H%M%S&#34;)
+        self.timestampedMap = {}
+
+    def _serialize_sections(self):
+        #_printi(&#39;serialize_sections started&#39;)
+        periodic_update = time.time()
+        statistics = [0, 0, 0, 0]#
+        NSections, NParagraphs, BytesRaw, BytesFinal = 0,1,2,3
+        try:
+          while not self._eventStop.is_set():
+            self._eventStop.wait(self.sectionInterval)
+            if len(self.timestampedMap) == 0:
+                continue
+
+            # register the section in the table of contents,
+            # this should be skipped when the contents downsampling is active.
+            if self.dirSize:
+                rf = self.contents_downsampling_factor
+                if rf &lt;=1 or (statistics[NSections]%rf) == 0:
+                    self.dataContents[self.sectionKey] = self.logbook.tell()
+                    packed = msgpack.packb(self.contentsSection)
+                    if len(packed) &lt; self.dirSize:
+                        self.packedContents = packed
+                    else:
+                        _printw((f&#39;The contents size is too small for&#39;
+                        f&#39; {len(packed)} bytes. Half of the entries will be&#39;
+                        &#39; removed to allow for more entries.}&#39;))
+                        self.contents_downsampling_factor *= 2
+                        downsampled_contents = dict(list(self.dataContents.items())\
+                          [::self.contents_downsampling_factor])
+                        self.contentsSection[&#39;data&#39;] = downsampled_contents
+                        _printd(f&#39;downsampled contentsSection:{self.contentsSection}&#39;)
+                        self.packedContents = msgpack.packb(self.contentsSection)
+
+            _printd(f&#39;section {statistics[NSections]} is ready write it to logbook @ {self.logbook.tell()}&#39;)
+            statistics[NSections] += 1
+            with self.lock:
+                paragraphs = list(self.timestampedMap.items())
+                self.logSection = (self.sectionKey, paragraphs)
+                #print(f&#39;section:{self.logSection}&#39;)
+            packed = msgpack.packb(self.logSection
+            , use_single_float=self.use_single_float)
+            statistics[NParagraphs] += len(paragraphs)
+            statistics[BytesRaw] += len(packed)
+            if self.compress is not None:
+                compressed = self.compress(packed)
+                packed = msgpack.packb(compressed
+                , use_single_float=self.use_single_float)
+            statistics[BytesFinal] += len(packed)
+            self.logbook.write(packed)
+            self.logbook.flush()
+
+            self._create_logSection()
+            timestamp = time.time()
+            dt = timestamp - periodic_update
+            if dt &gt; 10.:
+                periodic_update = timestamp
+                if not self.quiet:
+                    print(f&#39;{time.strftime(&#34;%y-%m-%d %H:%M:%S&#34;)} Logged&#39;
+                    f&#39; {statistics[NSections]} sections,&#39;
+                    f&#39; {statistics[NParagraphs]} paragraphs,&#39;
+                    f&#39; {statistics[BytesFinal]/1000.} KBytes&#39;)
+        except Exception as e:
+            print(f&#39;ERROR: Exception in serialize_sections: {e}&#39;)
+
+        # logging is finished
+        # rewrite the contentsSection
+        if self.dirSize:
+            self.logbook.seek(0)
+            self.logbook.write(self.packedContents)
+
+        # print status
+        msg = (f&#39;Logging finished for {statistics[NSections]} sections,&#39;
+        f&#39; {statistics[NParagraphs]} paragraphs,&#39;
+        f&#39; {statistics[BytesFinal]/1000.} KB.&#39;)
+        if self.compress is not None:
+            msg += f&#39; Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}&#39;
+        print(msg)
+        self.logbook.close()</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="apstrim.apstrim.Verbosity"><code class="name">var <span class="ident">Verbosity</span></code></dt>
+<dd>
+<div class="desc"><p>Show dedugging messages.</p></div>
+</dd>
+<dt id="apstrim.apstrim.eventExit"><code class="name">var <span class="ident">eventExit</span></code></dt>
+<dd>
+<div class="desc"><p>Calling the event.Exit.set() will safely exit the application.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="apstrim.apstrim.start"><code class="name flex">
+<span>def <span class="ident">start</span></span>(<span>self, fileName='apstrim.aps')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Start the streaming of the data objects to logbook file.
+If file is already exists then it will be renamed and
+a new file will be open with the provided name.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def start(self, fileName=&#39;apstrim.aps&#39;):
+    &#34;&#34;&#34;Start the streaming of the data objects to logbook file.
+    If file is already exists then it will be renamed and
+    a new file will be open with the provided name.
+    &#34;&#34;&#34;
+    self._eventStop.clear()
+    try:
+        modificationTime = pathlib.Path(fileName).stat().st_mtime
+        dt = datetime.datetime.fromtimestamp(modificationTime)
+        suffix = dt.strftime(&#39;_%Y%m%d_%H%M&#39;) 
+        try:    fname,ext = fileName.rsplit(&#39;.&#39;,1)
+        except:    fname,ext = fileName,&#39;&#39;
+        otherName = fname + suffix + &#39;.&#39; + ext
+        os.rename(fileName, otherName)
+        _printw(f&#39;Existing file {fileName} have been renamed to {otherName}&#39;)
+    except Exception as e:
+        pass
+
+    self.logbook = open(fileName, &#39;wb&#39;)
+
+    # write a preliminary &#39;Table of contents&#39; section
+    if self.dirSize:
+        self.contentsSection = {&#39;contents&#39;:{&#39;size&#39;:self.dirSize}, &#39;data&#39;:{}}
+        self.dataContents = self.contentsSection[&#39;data&#39;]
+        self.logbook.write(msgpack.packb(self.contentsSection))
+        # skip the &#39;Table of contents&#39; zone of the logbook
+        self.logbook.seek(self.dirSize)
+
+    # write the sections Abstract and Abbreviations
+    _printd(f&#39;write Abstract@{self.logbook.tell()}&#39;)
+    self.logbook.write(msgpack.packb(self.abstractSection
+    , use_single_float=self.use_single_float))
+    _printd(f&#39;write Abbreviations@{self.logbook.tell()}&#39;)
+    self.logbook.write(self.abbreviationSection)
+
+    self._create_logSection()
+
+    #_printi(&#39;starting serialization  thread&#39;)
+    myThread = threading.Thread(target=self._serialize_sections)
+    myThread.start()
+
+    _printi(f&#39;Logbook file: {fileName} created&#39;)</code></pre>
+</details>
+</dd>
+<dt id="apstrim.apstrim.stop"><code class="name flex">
+<span>def <span class="ident">stop</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Stop the streaming.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def stop(self):
+    &#34;&#34;&#34;Stop the streaming.&#34;&#34;&#34;
+    self._eventStop.set()
+    #self.logbook.close()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="apstrim.apstrim" href="#apstrim.apstrim">apstrim</a></code></h4>
+<ul class="">
+<li><code><a title="apstrim.apstrim.Verbosity" href="#apstrim.apstrim.Verbosity">Verbosity</a></code></li>
+<li><code><a title="apstrim.apstrim.eventExit" href="#apstrim.apstrim.eventExit">eventExit</a></code></li>
+<li><code><a title="apstrim.apstrim.start" href="#apstrim.apstrim.start">start</a></code></li>
+<li><code><a title="apstrim.apstrim.stop" href="#apstrim.apstrim.stop">stop</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>
