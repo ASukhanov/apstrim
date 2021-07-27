@@ -23,6 +23,8 @@ requires additional package: **pyqtgraph**.
 
 [apstrim](https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html)
 
+https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html
+
 [scan](https://github.com/ASukhanov/apstrim/blob/main/html/scan.)
 
 ## Examples
