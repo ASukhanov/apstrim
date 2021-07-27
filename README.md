@@ -21,15 +21,9 @@ requires additional package: **pyqtgraph**.
 
 ## API refrerence
 
-[apstrim](https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html)
-
-https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html
-
 [apstrim](https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/docs/apstrim.html)
 
 [scan](https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/docs/scan.html)
-
-[scan](https://github.com/ASukhanov/apstrim/blob/main/html/scan.)
 
 ## Examples
 
