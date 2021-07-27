@@ -25,6 +25,8 @@ requires additional package: **pyqtgraph**.
 
 https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/html/apstrim.html
 
+https://htmlpreview.github.io/?https://github.com/ASukhanov/apstrim/blob/main/docs/apstrim.html
+
 [scan](https://github.com/ASukhanov/apstrim/blob/main/html/scan.)
 
 ## Examples
