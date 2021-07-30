@@ -44,7 +44,7 @@ Serialization
     21-06-18 22:51:15 Logged 122 paragraphs, 492.837 KBytes
     ...
 
-    :python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV,WaveForm_RBV
+    :python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV,Waveform_RBV
     21-06-19 11:04:58 Logged 122 paragraphs, 492.682 KBytes
 	...
 	# Note, Compression is poor for floating point arrays with high entropy.

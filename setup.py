@@ -10,7 +10,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="apstrim",
-    version="1.3.1",# 2021-07-26
+    version="1.4.0",# 2021-07-30
     description="Parameter and Object Serializer for EPICS, ADO or LITE",
     long_description=README,
     long_description_content_type="text/markdown",

@@ -8,7 +8,8 @@ import numpy as np
 import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
-__version__ = 'v1.3.1 2021-07-26'# Docstring updated
+__version__ = 'v1.4.0 2021-07-30'#
+#TODO: the par2key is mapped to int now, therefore both par2key and key2par could be just lists, that could be faster.
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -51,7 +52,8 @@ class APScan():
         self.logbook = open(fileName,'rb')
 
         # unpack logbook contents and set file position after it
-        self.unpacker = msgpack.Unpacker(self.logbook, use_list=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
+        self.unpacker = msgpack.Unpacker(self.logbook, use_list=False
+        ,strict_map_key=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
         self.dirSize = 0
         self.directory = []
         for contents in self.unpacker:
@@ -64,10 +66,11 @@ class APScan():
             self.directory = contents['data']
             break
 
-        # unpack two sections after the contents: Abstract and Abbreviations
+        # unpack two sections after the contents: Abstract and Index
         self.position = self.dirSize
         self.logbook.seek(self.position)
-        self.unpacker = msgpack.Unpacker(self.logbook, use_list=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
+        self.unpacker = msgpack.Unpacker(self.logbook, use_list=False
+        ,strict_map_key=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
         nSections = 0
         for section in self.unpacker:
             #print(f'section:{nSections}')
@@ -82,16 +85,16 @@ class APScan():
                     module = __import__(self.compression)
                     self.decompress = module.decompress
                 continue
-            if nSections == 2:# section: Abbreviations
-                self.par2key = section['abbreviations']
+            if nSections == 2:# section: Index
+                self.par2key = section['index']
                 self.key2par = {value[0]:key for key,value in self.par2key.items()}
-                _printvv(f'Abbreviations@{self.logbook.tell()}: {self.key2par}')                
+                _printvv(f'Index@{self.logbook.tell()}: {self.key2par}')                
                 break
 
     def get_headers(self):
-        """Returns dict of header sections: Directory, Abstract, Abbreviations"""
+        """Returns dict of header sections: Directory, Abstract, Index"""
         return {'Directory':self.directory, 'Abstract':self.abstract
-        , 'Abbreviations':self.key2par}
+        , 'Index':self.key2par}
 
     def extract_objects(self, span=0., items=[], startTime=None):
         """
@@ -137,7 +140,8 @@ class APScan():
             self.position = self.directory[startSection]
             self.logbook.seek(self.position)
             _printvv(f'logbook positioned to section {startSection}, offset={self.dirSize}')
-            self.unpacker = msgpack.Unpacker(self.logbook, use_list=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
+            self.unpacker = msgpack.Unpacker(self.logbook, use_list=False
+            ,strict_map_key=False) #use_list speeds up 20%, # does not help:, read_size=100*1024*1024)
 
         # loop over sections in the logbook
         tstart = time.time()
@@ -157,7 +161,8 @@ class APScan():
             try:
                 if self.compression != 'None':
                     decompressed = self.decompress(section)
-                    section = msgpack.unpackb(decompressed)
+                    section = msgpack.unpackb(decompressed
+                    ,strict_map_key=False)
                 sectionDatetime, paragraphs = section
             except Exception as e:
                 print(f'WARNING: wrong section {nSections}: {str(section)[:75]}...', {e})

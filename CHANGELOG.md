@@ -1,9 +1,15 @@
-# Change Log
+# Change Log for module apstrim
 All notable changes to this project will be documented in this file.
  
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [1.4.0] - 2021-07-26
+
+### Changed 
+Par2key maps to integer instead of string. Msgpack allows it.
+Section 'abbreviation' renamed by 'index'.
+
 ## [1.3.1] - 2021-07-26
 Docstrings have been updated.
 
@@ -35,7 +41,7 @@ Table of contents to provide for random-access retrieval.
 Downsampling of the table of contents in case of too many sections.
 Section count, Verbosity, 
  
-### Changed 
+
 
 logParagraphs removed, the timestampedMap is converted to list when 
 section is ready.

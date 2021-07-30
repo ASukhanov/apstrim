@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(description=__doc__
     ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
     ,epilog=f'aplog scan : {scanVersion},  view: {__version__}')
 parser.add_argument('-H', '--header', help=\
-'Show selected header, lecal values: Directory, Abstract, Abbreviations')
+'Show selected header, lecal values: Directory, Abstract, Index')
 parser.add_argument('-i', '--items', help=('Items to plot. Legal values: "all" or '
 'string of comma-separated keys of the parameter map e.g. "1,3,5,7,a0,az"'))
 parser.add_argument('-p', '--plot', action='store_true', help=
@@ -138,7 +138,7 @@ if pargs.plot:
                 # plotting with symbols is 10 times slower
                 p = plotItem.plot(a[0], a[1], pen=pen
                 ,symbol='+', symbolSize=5, symbolPen=pen)
-            legendText = key+' '+xy['par']
+            legendText = str(key)+' '+xy['par']
             if legendText not in legends:
                 legends.add(legendText)
                 legend.addItem(p, legendText)

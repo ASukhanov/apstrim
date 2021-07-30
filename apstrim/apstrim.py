@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '1.3.1 2021-07-26'# docstrings updated
+__version__ = '1.4.0 2021-07-30'# par2key mapping using integers
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -118,14 +118,15 @@ class apstrim():
             except:# Exception as e:
                 _printe(f'Could not subscribe  for {pname}')#: {e}')
                 continue
-            self.pars[pname] = [_shortkey(i)]
+            #self.pars[pname] = [_shortkey(i)]
+            self.pars[pname] = [i]
             i += 1
         if len(self.pars) == 0:
             _printe(f'Could not build the list of parameters')
             sys,exit()
         _printi(f'parameters: {self.pars}')
 
-        self.abbreviationSection = msgpack.packb({'abbreviations':self.pars}
+        self.indexSection = msgpack.packb({'index':self.pars}
         , use_single_float=self.use_single_float)
 
     def start(self, fileName='apstrim.aps'):
@@ -156,12 +157,12 @@ class apstrim():
             # skip the 'Table of contents' zone of the logbook
             self.logbook.seek(self.dirSize)
 
-        # write the sections Abstract and Abbreviations
+        # write the sections Abstract and Indexs
         _printd(f'write Abstract@{self.logbook.tell()}')
         self.logbook.write(msgpack.packb(self.abstractSection
         , use_single_float=self.use_single_float))
-        _printd(f'write Abbreviations@{self.logbook.tell()}')
-        self.logbook.write(self.abbreviationSection)
+        _printd(f'write Index@{self.logbook.tell()}')
+        self.logbook.write(self.indexSection)
 
         self._create_logSection()
 
