@@ -23,6 +23,8 @@ def main():
     'Infrastructure namespace, e.g.: EPICS, ADO or LITE')
     parser.add_argument('-t', '--sectionTime', type=float, default=60., help=\
     'Time interval of writing of sections to logbook')
+    parser.add_argument('-T', '--acqTime', type=float, default=99e6, help=\
+    'How long (seconds) to take data.')
     parser.add_argument('-q', '--quiet', action='store_true', help=\
     'Quiet: dont print section progress')
     parser.add_argument('-v', '--verbose', action='store_true', help=\
@@ -56,7 +58,7 @@ def main():
     apstrim.Verbosity = pargs.verbose
     aps = apstrim(publisher, pvNames, pargs.sectionTime, compress=pargs.compress
     , quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
-    aps.start(pargs.outfile)
+    aps.start(pargs.outfile, howLong=pargs.acqTime)
 
     timeSpan = 0 #pargs.sectionTime*2 + 5
     txt = f'for {round(timeSpan/60., 2)} m' if timeSpan else 'endlessly'

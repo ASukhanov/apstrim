@@ -1,9 +1,12 @@
 # Change Log for module apstrim
-All notable changes to this project will be documented in this file.
  
-The format is based on [Keep a Changelog](http://keepachangelog.com/)
-and this project adheres to [Semantic Versioning](http://semver.org/).
- 
+## [2.0.0] - 2021-08-03
+
+### Changed 
+
+Vertical stacking of parameters. The section is now a map of parameters.
+Parameters are converted to numpy arrays and stored as bytes. Packing bytes is 100 times faster than the packing of lists.
+
 ## [1.4.0] - 2021-07-26
 
 ### Changed 

@@ -1,6 +1,6 @@
 """Plot data from the aplog-generated files."""
-__version__ = 'v1.3.0 2021-07-22'
-
+__version__ = 'v2.0.0 2021-08-04'#
+ 
 import sys, time, argparse, os
 from timeit import default_timer as timer
 from functools import partial
@@ -11,15 +11,21 @@ pg.setConfigOption('foreground', 'k')
 
 from .scan import APScan, __version__ as scanVersion
 
+Nano = 1e-9
 def printv(msg):
     if APScan.Verbosity >= 1:
         print(f'DBG_view: {msg}')
+def _croppedText(txt, limit=400):
+    if len(txt) > limit:
+        txt = txt[:limit]+'...'
+    return txt
 
 parser = argparse.ArgumentParser(description=__doc__
     ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
     ,epilog=f'aplog scan : {scanVersion},  view: {__version__}')
-parser.add_argument('-H', '--header', help=\
-'Show selected header, lecal values: Directory, Abstract, Index')
+legalHeaders = 'Directory, Abstract, Index'
+parser.add_argument('-H', '--header', nargs='?', default='', help=\
+'Show all headers (-H) or selected header, legal values: '+legalHeaders)
 parser.add_argument('-i', '--items', help=('Items to plot. Legal values: "all" or '
 'string of comma-separated keys of the parameter map e.g. "1,3,5,7,a0,az"'))
 parser.add_argument('-p', '--plot', action='store_true', help=
@@ -33,7 +39,6 @@ parser.add_argument('-v', '--verbose', nargs='*', help=\
 parser.add_argument('files', nargs='*', default=['apstrim.aps'], help=\
 'Input files, Unix style pathname pattern expansion allowed e.g: *.aps')
 pargs = parser.parse_args()
-
 print(f'files: {pargs.files}')
 
 #if pargs.plot is not None:
@@ -42,7 +47,7 @@ print(f'files: {pargs.files}')
 if pargs.verbose is not None:
     APScan.Verbosity = 1 if len(pargs.verbose) == 0\
     else len(pargs.verbose[0]) + 1
-print(f'Verbosity: {APScan.Verbosity}')
+#print(f'Verbosity: {APScan.Verbosity}')
 
 allExtracted = []
 
@@ -51,17 +56,36 @@ for fileName in pargs.files:
     print(f'Processing {fileName}, size: {round(apscan.logbookSize*1e-6,3)} MB')
     headers = apscan.get_headers()
     
-    if pargs.header:
-        print(f'Header {pargs.header}:\n {headers[pargs.header]}')
+    if pargs.header != '':
+        if pargs.header is None: pargs.header = 'All'
+        pargs.header = pargs.header.capitalize()
+        if pargs.header == 'All':
+            pargs.header = legalHeaders.split(', ')
+        else:
+            pargs.header = [pargs.header]
+        for header in pargs.header:
+            d = headers[header]
+            if header == 'Directory':                
+                def nanoSeconds2Datetime(ns:int):
+                    from datetime import datetime
+                    dt = datetime.fromtimestamp(ns*Nano)
+                    return dt.strftime('%y%m%d_%H%M%S') 
+                d = {nanoSeconds2Datetime(ns):v for ns,v in d.items()}
+            s = f'Header {header}:{{\n'
+            s += f'{d}'[1:].replace(', ',',\t')
+            print(s)
 
     if pargs.items is None:
         print('No items to scan')
         sys.exit()
 
-    items = [] if pargs.items == 'all' else pargs.items.split(',')
+    items = [] if pargs.items == 'all'\
+      else [int(i) for i in pargs.items.split(',')]
     printv(f'scan{pargs.timeInterval, items, pargs.startTime}')
+    ts = timer()
     extracted = apscan.extract_objects(pargs.timeInterval, items, pargs.startTime)
-    allExtracted .append(extracted)
+    allExtracted.append(extracted)
+    #print(_croppedText(f'allEextracted: {allExtracted}'))
 
 #````````````````````````````Plot objects`````````````````````````````````````
 if pargs.plot:
@@ -113,32 +137,50 @@ if pargs.plot:
     idx = 0
     ts = timer()
     nPoints = 0
-    viewRect = plotItem.viewRect()
-    xSize = int(viewRect.right() - viewRect.left())
+    #viewRect = plotItem.viewRect()
+    #xSize = int(viewRect.right() - viewRect.left())
     legends = set()
     for extracted in allExtracted:
-      for key,xy in list(extracted.items())[::-1]: #inverted map produces better color for first items 
-        print(f"Graph[{key}]: {xy['par']}, {len(xy['time'])} points")
+      for key,ptv in list(extracted.items())[::-1]: #inverted map produces better color for first items
         idx += 1
-        # sort points along X
-        a = np.stack([xy['time'],xy['value']])
-        a = a[:, a[0, :].argsort()]
         pen = (idx,len(extracted))
-        npt = len(a[0])
-        if npt < 2:
+        par = ptv['par']
+        timestamps = ptv['times']
+        #No gain:timestamps = np.array(timestamps)
+        #print(_croppedText(f'times: {timestamps}'))
+        nTStamps = len(timestamps)
+        y = ptv['values']
+        #y = np.array(y)
+        #No gain:print(_croppedText(f'values: {y}'))
+
+        # expand X, take care if Y is list of lists
+        x = []
+        spread = 0
+        for i,tstamp in enumerate(timestamps):
+            try: ly = len(y[i])
+            except: ly = 1
+            try:	spread = (timestamps[i+1] - tstamp)/2
+            except: pass
+            x.append(np.linspace(tstamp, tstamp+spread, ly))
+        x = np.array(x).flatten()
+        y = np.array(y).flatten()
+        nn = len(x)
+        print(f"Graph[{key}]: {par}, {nTStamps} tstamps, {nn} points")
+        
+        if nTStamps < 2:
             continue
-        nPoints += npt
-        #print(f'npt/xSize: {npt/xSize, npt,xSize}')
+        nPoints += nn
+        #print(f'nn/xSize: {nn/xSize, nn,xSize}')
         try:
-            #if pargs.plot =='fast' or npt/xSize > 100:
-            if npt/xSize > 500:                
+            #if pargs.plot =='fast' or nTStamps/xSize > 100:
+            if nn > 500: #/xSize > 500:                
                 # plotting of only lines
-                p = plotItem.plot(a[0], a[1], pen=pen)
+                p = plotItem.plot(x, y, pen=pen)
             else:
                 # plotting with symbols is 10 times slower
-                p = plotItem.plot(a[0], a[1], pen=pen
+                p = plotItem.plot(x, y, pen=pen
                 ,symbol='+', symbolSize=5, symbolPen=pen)
-            legendText = str(key)+' '+xy['par']
+            legendText = str(key)+' '+par
             if legendText not in legends:
                 legends.add(legendText)
                 legend.addItem(p, legendText)
