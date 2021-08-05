@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '2.0.0 2021-08-03'# par2key mapping using integers
+__version__ = '2.0.0 2021-08-04'# par2key mapping using integers
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -240,6 +240,9 @@ class apstrim():
                     else:
                         timestamp = int(timestamp/Nano)
                     skey = self.par2Index[dev+':'+par]
+                    # add to parameter list
+                    self.sectionPars[skey][SPTime].append(timestamp)
+                    self.sectionPars[skey][SPVal].append(value)
                 elif devPar == 'ppmuser':# ADO has extra item, skip it.
                     continue
                 else:
@@ -267,7 +270,7 @@ class apstrim():
         
     def _create_logSection(self):
       with self.lock:
-        #print('create empty list of paragraphs')
+        #print('create empty section')
         self.sectionKey = int(time.time()/Nano)
         self.sectionPars = {i:([],[]) for i in self.par2Index.values()}
         self.section = {'t':self.sectionKey, 'pars':self.sectionPars}
@@ -276,7 +279,7 @@ class apstrim():
         #_printi('serialize_sections started')
         periodic_update = time.time()
         statistics = [0, 0, 0, 0]#
-        NSections, NParagraphs, BytesRaw, BytesFinal = 0,1,2,3
+        NSections, NParLists, BytesRaw, BytesFinal = 0,1,2,3
         maxSections = self.howLong//self.sectionInterval
         try:
           while statistics[NSections] < maxSections\
@@ -310,6 +313,7 @@ class apstrim():
             numpied = {'t':self.section['t'],'pars':pars}
             with self.lock:
                 for key,val in self.sectionPars.items():
+                    statistics[NParLists] += 1
                     #print( _croppedText(f'sectItem:{key,val}'))
                     sptimes = _packnp(val[SPTime])
                     if sptimes is None:
@@ -326,7 +330,6 @@ class apstrim():
 
             packed = msgpack.packb(numpied
             , use_single_float=self.use_single_float)
-            #statistics[NParagraphs] += len(paragraphs)
             statistics[BytesRaw] += len(packed)
             if self.compress is not None:
                 compressed = self.compress(packed)
@@ -344,7 +347,7 @@ class apstrim():
                 if not self.quiet:
                     print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged'
                     f' {statistics[NSections]} sections,'
-                    f' {statistics[NParagraphs]} paragraphs,'
+                    f' {statistics[NParLists]} parLists,'
                     f' {statistics[BytesFinal]/1000.} KBytes')
         except Exception as e:
             print(f'ERROR: Exception in serialize_sections: {e}')
@@ -357,7 +360,7 @@ class apstrim():
 
         # print status
         msg = (f'Logging finished for {statistics[NSections]} sections,'
-        f' {statistics[NParagraphs]} paragraphs,'
+        f' {statistics[NParLists]} parLists,'
         f' {statistics[BytesFinal]/1000.} KB.')
         if self.compress is not None:
             msg += f' Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}'

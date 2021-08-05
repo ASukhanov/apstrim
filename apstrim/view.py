@@ -1,4 +1,4 @@
-"""Plot data from the aplog-generated files."""
+"""Plot data from the apstrim-generated files."""
 __version__ = 'v2.0.0 2021-08-04'#
  
 import sys, time, argparse, os

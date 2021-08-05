@@ -11,8 +11,8 @@ def main():
     ,epilog=f'apstrim: {__version__}')
     parser.add_argument('-c', '--compress', action='store_true', help=\
     'Enable online compression')
-    parser.add_argument('-D', '--dirSize', type=int, default=10240, help=\
-    'Size of a directory section, set it to 0 to disable random access retrieval')
+    #parser.add_argument('-D', '--dirSize', type=int, default=10240, help=\
+    #'Size of a directory section, set it to 0 to disable random access retrieval')
     parser.add_argument('-d', '--doublePrecision', action='store_true', help=\
     'Disable conversion of float64 to float32')
     #parser.add_argument('-f', '--file', default=None, help=\
