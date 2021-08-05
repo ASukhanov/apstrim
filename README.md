@@ -1,17 +1,20 @@
 # apstrim
-Logger and extractor of Control System parameters (a.c.a EPICS PVs). 
-Analog of SDDS writer.
+Logger and extractor of Control System parameters (a.c.a EPICS PVs).
 
 - Supported infrastructures: ADO, EPICS, LITE.
+- Very fast random access retrieval of objects for selected time interval.
+- Nonhomogeneous and homogeneous data are processed equally fast.
+- Scalar and vector data could be mixed.
+- Data with different updating frequency can be mixed.
+- Self-describing data format, no need for schema.
 - Efficient binary serialization format.
-- Like JSON. But it's faster and smaller.
-- Random-access retrieval of objects from selected time interval.
+- Like JSON. But it's faster and smaller. 
 - Numpy arrays supported.
 - Fast online compression.
 - Basic plotting of the logged data.
 
 ## Installation
-Dependencies: **msgpack, msgpack-numpy, caproto, lz4framed**. 
+Dependencies: **msgpack, caproto, lz4framed**. 
 These packages will be installed using pip:
 
     pip3 install apstrim
