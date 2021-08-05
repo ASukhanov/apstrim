@@ -12,6 +12,7 @@ Logger and extractor of Control System parameters (a.c.a EPICS PVs).
 - Numpy arrays supported.
 - Fast online compression.
 - Basic plotting of the logged data.
+- Data extraction from a file is allowed when the file is being written.
 
 ## Installation
 Dependencies: **msgpack, caproto, lz4framed**. 
