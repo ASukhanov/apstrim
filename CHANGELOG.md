@@ -4,10 +4,11 @@
 
 ### Changed 
 
-Vertical stacking of parameters. The section is now a map of parameters.
-Parameters are converted to lists of numpy arrays and stored as bytes. 
-Packing bytes is 100 times faster than the packing of lists of lists.
-Concatenation of parameters accross of section is done using list.extend,
+Major upgrade. The extraction performance drastically improved (~100 times). 
+Vertical stacking of parameters. The sections are now maps of parameters.
+Parameters are converted to lists of numpy arrays, stored as bytes. 
+The packing of bytes is 100 times faster than the packing of lists of lists.
+Concatenation of parameters accross of sections is done using list.extend(),
 this is 6 times faster than using numpy concatenation.
 The iteration speed during extraction reaches 1200 MB/s (tested with 
 13 GB file test_1200_MBPS.aps).
