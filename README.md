@@ -2,11 +2,11 @@
 Logger and extractor of Control System parameters (a.c.a EPICS PVs).
 
 - Supported infrastructures: ADO, EPICS, LITE.
-- Very fast random access retrieval of objects for selected time interval.
+- Very fast random access retrieval of objects for selected time interval. Retrieval performance of 300 million of floats per second has been demonstrated.
 - Nonhomogeneous and homogeneous data are processed equally fast.
 - Scalar and vector data could be mixed.
 - Data with different updating frequency can be mixed.
-- Self-describing data format, no need for schema.
+- Self-describing data format, no schema required.
 - Efficient binary serialization format.
 - Like JSON. But it's faster and smaller. 
 - Numpy arrays supported.
