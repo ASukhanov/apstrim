@@ -226,7 +226,7 @@ class APScan():
             extractionTime = time.time() - tstart
             if nSections%60 == 0:
                 _printv((f'Data sections: {nSections}'
-                f', elapsed time: {round(dt,4)}'))#, paragraphs/s: {nParagraphs//extractionTime}'))
+                f', elapsed time: {round(extractionTime,4)}'))
             try:# handle compressed data
                 if self.compression != 'None':
                     ts = timer()
