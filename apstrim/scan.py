@@ -7,8 +7,6 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-import msgpack_numpy
-msgpack_numpy.patch()
 __version__ = 'v2.0.1 2021-08-08'#
 #TODO: the par2key is mapped to int now, therefore both par2key and key2par could be just lists, that could be faster.
 

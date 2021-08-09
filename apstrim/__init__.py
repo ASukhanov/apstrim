@@ -10,11 +10,15 @@
 """Logger of Control System parameters and data objects.
 Features:
 - Supported Control Systems infrastructures: ADO, EPICS, LITE.
+- Very fast random access retrieval of objects for selected time interval.
+- Nonhomogeneous and homogeneous data are processed equally fast.
+- Self-describing data format, no schema required.
 - Efficient binary serialization format.
 - Like JSON. But it's faster and smaller.
 - Numpy arrays supported.
 - Optional online compression.
 - Basic plotting of logged data.
+- Data extraction from a file is allowed when the file is being written.
 
 Example of command line usage:
 
@@ -40,4 +44,4 @@ aps.stop()
 
 from .apstrim import apstrim
 
-__version__ = '2.0.1'
+__version__ = '2.0.2'

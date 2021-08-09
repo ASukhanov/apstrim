@@ -1,7 +1,7 @@
 # Change Log for module apstrim
  
 
-## [2.0.0] - 2021-08-08
+## [2.0.2] - 2021-08-09
 
 ### Changed
 
@@ -10,7 +10,8 @@ This allows for simultaneous reading and writing access to lobooks.
 
 scan.extract_objects():
 Added bufSize argument. Corrected the handling of startTime and span arguments
-Calculation of the extraction speed is corrected. The extraction speed reaches 950 MB/s.
+Calculation of the extraction speed is corrected. The extraction speed reaches
+950 MB/s.
 
 setup.py:
 Dependency of msgpack_numpy have been removed.
@@ -26,7 +27,7 @@ The packing of bytes is 100 times faster than the packing of lists of lists.
 Concatenation of parameters accross of sections is done using list.extend(),
 this is 6 times faster than using numpy concatenation.
 The iteration speed during extraction reaches 1000 MB/s (tested with 
-13 GB file test_1200_MBPS.aps).
+1.3 GB file test_1200_MBPS.aps).
 
 ## [1.4.0] - 2021-07-26
 
