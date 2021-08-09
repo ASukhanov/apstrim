@@ -1,4 +1,4 @@
-"""Plot data from the apstrim-generated files."""
+"""Plot data from the aplog-generated files."""
 __version__ = 'v2.0.0 2021-08-04'#
  
 import sys, time, argparse, os
@@ -9,7 +9,7 @@ import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-from .scan import APScan, __version__ as scanVersion
+from apstrim.scan import APScan, __version__ as scanVersion
 
 Nano = 1e-9
 def printv(msg):
@@ -82,8 +82,12 @@ for fileName in pargs.files:
     items = [] if pargs.items == 'all'\
       else [int(i) for i in pargs.items.split(',')]
     printv(f'scan{pargs.timeInterval, items, pargs.startTime}')
+
+    # extract the items
     ts = timer()
-    extracted = apscan.extract_objects(pargs.timeInterval, items, pargs.startTime)
+    extracted = apscan.extract_objects(pargs.timeInterval, items
+    , pargs.startTime)
+    print(f'Total (reading + extraction) time: {round(timer()-ts,3)}')
     allExtracted.append(extracted)
     #print(_croppedText(f'allEextracted: {allExtracted}'))
 
@@ -186,7 +190,7 @@ if pargs.plot:
                 legend.addItem(p, legendText)
         except Exception as e:
             print(f'WARNING: plotting is not supported for item {key}: {e}')
-    print(f'plotting time of {nPoints} points: {round(timer()-ts,3)} s')
+    print(f'Plotting time of {nPoints} points: {round(timer()-ts,3)} s')
 
     cursors = set()
     def add_cursor(direction):

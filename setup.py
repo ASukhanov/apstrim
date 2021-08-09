@@ -10,7 +10,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="apstrim",
-    version="2.0.0",# 2021-07-30
+    version="2.0.1",# 2021-08-08
     description="Parameter and Object Serializer for EPICS, ADO or LITE",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -25,7 +25,7 @@ setup(
     ],
     packages=["apstrim"],
     include_package_data=True,
-    install_requires=["msgpack", "msgpack_numpy", "caproto"],
+    install_requires=["msgpack", "caproto"],
     entry_points={
         "console_scripts": [
             "apstrim=apstrim.__main__:main",
