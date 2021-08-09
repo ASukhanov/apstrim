@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '2.0.0 2021-08-04'# par2key mapping using integers
+__version__ = '2.0.1 2021-08-07'
 
 #TODO: consider to replace msgpack_numpy with something simple and predictable.
 #The use_single_float has no efect in msgPack,
@@ -17,7 +17,7 @@ import sys, time, string, copy
 import os, pathlib, datetime
 import threading
 import signal
-#from timeit import default_timer as timer
+from timeit import default_timer as timer
 
 import numpy as np
 import msgpack
@@ -26,6 +26,7 @@ import msgpack
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
+MinTimestamp = 1600000000000000000 # Minimal possible timestamp
 MAXU8 = 256 - 1
 MAXI8 = int(256/2) - 1
 MAXU16 = int(256**2) - 1
@@ -53,16 +54,16 @@ def _packnp(data, use_single_float=True):
     arrays, then it will be returned as
     {'dtype':dtype, 'shape':shape, 'value':nparray.tobytes()},
     if not, then they will be returned as is.
-    In msgpack the packing of bytes is ~100 times faster than packing of
+    In msgpack the unpacking of bytes is ~100 times faster than unpacking of
     integers"""
-
+    # 50% time is spent here
     try:
         l1 = len(data)
     except:
-        print('Single element, no need to pack')
+        #print('Single element, no need to pack')
         return data
     if l1 == 0:
-        print('Empty list, no need to pack')
+        #print('Empty list, no need to pack')
         return None
     atype = type(data[0])
     #print( _croppedText(f'packing {l1} of {atype}: {data}'))
@@ -110,7 +111,7 @@ class apstrim():
     **use_single_float**:     Use single precision float type for float. (default: True)
     
     **dirSize**:    Size of a Table Of Contents, which is used for random-access
-                retrieval. If 0, then no table will be created.
+                retrieval.
 """
     EventExit = threading.Event()
     """Calling the EventExit.set() will safely exit the application."""
@@ -193,12 +194,11 @@ class apstrim():
         self.logbook = open(fileName, 'wb')
 
         # write a preliminary 'Table of contents' section
-        if self.dirSize:
-            self.contentsSection = {'contents':{'size':self.dirSize}, 'data':{}}
-            self.dataContents = self.contentsSection['data']
-            self.logbook.write(msgpack.packb(self.contentsSection))
-            # skip the 'Table of contents' zone of the logbook
-            self.logbook.seek(self.dirSize)
+        self.contentsSection = {'contents':{'size':self.dirSize}, 'data':{}}
+        self.dataContents = self.contentsSection['data']
+        self.logbook.write(msgpack.packb(self.contentsSection))
+        # skip the 'Table of contents' zone of the logbook
+        self.logbook.seek(self.dirSize)
 
         # write the sections Abstract and Index
         _printd(f'write Abstract@{self.logbook.tell()}')
@@ -206,6 +206,7 @@ class apstrim():
         , use_single_float=self.use_single_float))
         _printd(f'write Index@{self.logbook.tell()}')
         self.logbook.write(self.indexSection)
+        savedPos = self.logbook.tell()
 
         self._create_logSection()
 
@@ -226,7 +227,8 @@ class apstrim():
         args is a map of delivered objects."""
         #print(f'delivered: {args}')
         #self.timestampedMap = {}
-        for devPar,props in args[0].items():
+        with self.lock:
+          for devPar,props in args[0].items():
             #print( _croppedText(f'devPar: {devPar,props}'))
             try:
                 if isinstance(devPar, tuple):
@@ -239,9 +241,13 @@ class apstrim():
                         + props['timestampNanoSeconds'])
                     else:
                         timestamp = int(timestamp/Nano)
+                    if timestamp < MinTimestamp:
+                        # Timestamp is wrong, discard the parameter
+                        #print(f'timestamp is wrong {timestamp, MinTimestamp}')
+                        continue
                     skey = self.par2Index[dev+':'+par]
-                    # add to parameter list
-                    self.sectionPars[skey][SPTime].append(timestamp)
+                    self.timestamp = timestamp
+                    self.sectionPars[skey][SPTime].append(self.timestamp)
                     self.sectionPars[skey][SPVal].append(value)
                 elif devPar == 'ppmuser':# ADO has extra item, skip it.
                     continue
@@ -256,61 +262,79 @@ class apstrim():
                         except: # try an old LITE packing
                             value = pars[par]['value']
                             timestamp = int(pars[par]['timestamp']/Nano)
+                        if timestamp < MinTimestamp:
+                            # Timestamp is wrong, discard the parameter
+                            continue
                         skey = self.par2Index[devPar+':'+par]
                         # add to parameter list
-                        self.sectionPars[skey][SPTime].append(timestamp)
+                        self.timestamp = timestamp
+                        self.sectionPars[skey][SPTime].append(self.timestamp)
                         #print( _croppedText(f'value: {value}'))
                         self.sectionPars[skey][SPVal].append(value)
-                        #print(f'devPar {devPar}@{timestamp,skey}:{timestamp,value}')
+                #print(f'devPar {devPar}@{timestamp,skey}:{timestamp,value}')
             except Exception as e:
                 _printw(f'exception in unpacking: {e}')
                 continue
-
+          #try:      ts = self.timestamp
+          #except:   ts = '?'
+          #print(f'served timestamp: {ts}')
         #print( _croppedText(f'section: {self.section}'))
         
     def _create_logSection(self):
-      with self.lock:
-        #print('create empty section')
-        self.sectionKey = int(time.time()/Nano)
-        self.sectionPars = {i:([],[]) for i in self.par2Index.values()}
-        self.section = {'t':self.sectionKey, 'pars':self.sectionPars}
+        with self.lock:
+            #print('create empty section')
+            try:
+                tstart = self.timestamp
+            except:
+                tstart = int(time.time()/Nano)
+            self.sectionPars = {i:([],[]) for i in self.par2Index.values()}
+            self.section = {'tstart':tstart, 'tend':None
+            ,'pars':self.sectionPars}
 
     def _serialize_sections(self):
         #_printi('serialize_sections started')
         periodic_update = time.time()
-        statistics = [0, 0, 0, 0]#
-        NSections, NParLists, BytesRaw, BytesFinal = 0,1,2,3
+        statistics = [0, 0, 0, 0, 0.]#
+        NSections, NParLists, BytesRaw, BytesFinal, LogTime = 0,1,2,3,4
         maxSections = self.howLong//self.sectionInterval
         try:
           while statistics[NSections] < maxSections\
               and not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
+            logTime = timer()
 
-            # register the section in the table of contents,
+            # register section in the table of contents,
             # this should be skipped when the contents downsampling is active.
-            if self.dirSize:
-                rf = self.contents_downsampling_factor
-                if rf <=1 or (statistics[NSections]%rf) == 0:
-                    self.dataContents[self.sectionKey] = self.logbook.tell()
-                    packed = msgpack.packb(self.contentsSection)
-                    if len(packed) < self.dirSize:
-                        self.packedContents = packed
-                    else:
-                        _printw((f'The contents size is too small for'
-                        f' {len(packed)} bytes. Half of the entries will be'
-                        ' removed to allow for more entries.}'))
-                        self.contents_downsampling_factor *= 2
-                        downsampled_contents = dict(list(self.dataContents.items())\
-                          [::self.contents_downsampling_factor])
-                        self.contentsSection['data'] = downsampled_contents
-                        _printd(f'downsampled contentsSection:{self.contentsSection}')
-                        self.packedContents = msgpack.packb(self.contentsSection)
+            rf = self.contents_downsampling_factor
+            if rf <=1 or (statistics[NSections]%rf) == 0:
+                self.dataContents[self.section['tstart']]\
+                = self.logbook.tell()
+                packed = msgpack.packb(self.contentsSection)
+                if len(packed) < self.dirSize:
+                    self.packedContents = packed
+                else:
+                    _printw((f'The contents size is too small for'
+                    f' {len(packed)} bytes. Half of the entries will be'
+                    ' removed to allow for more entries.}'))
+                    self.contents_downsampling_factor *= 2
+                    downsampled_contents = dict(list(self.dataContents.items())\
+                      [::self.contents_downsampling_factor])
+                    self.contentsSection['data'] = downsampled_contents
+                    _printd(f'downsampled contentsSection:{self.contentsSection}')
+                    self.packedContents = msgpack.packb(self.contentsSection)
 
-            _printd(f'section {statistics[NSections]} is ready write it to logbook @ {self.logbook.tell()}')
+            # First section need to be written to file
+            currentPos = self.logbook.tell()
+            self.logbook.seek(0)
+            self.logbook.write(self.packedContents)
+            self.logbook.seek(currentPos)
 
+            _printd(f'section {statistics[NSections]} is ready for writing to logbook @ {self.logbook.tell()}')
+            self.section['tend'] = self.timestamp
             statistics[NSections] += 1
-            pars = {}
-            numpied = {'t':self.section['t'],'pars':pars}
+
+            # pack to numpy/bytes, they are very fast to unpack
+            npPacked = {}
             with self.lock:
                 for key,val in self.sectionPars.items():
                     statistics[NParLists] += 1
@@ -319,44 +343,53 @@ class apstrim():
                     if sptimes is None:
                         continue
                     spvals = _packnp(val[SPVal])
-                    pars[key] = [sptimes, spvals]
-
+                    npPacked[key] = (sptimes, spvals)
             if apstrim.Verbosity >= 1:
-                print( _croppedText(f"numpied: {numpied['t'], numpied['pars'].keys()}"))
-                for i,kValues in enumerate(numpied['pars'].items()):
+                print( _croppedText(f"npPacked: {self.section['tstart'], npPacked.keys()}"))
+                for i,kValues in enumerate(npPacked.items()):
                     print( _croppedText(f'Index{i}: {kValues[0]}'))
                     for value in kValues[1]:
                         print( _croppedText(f'Value{i}: {value}'))
 
-            packed = msgpack.packb(numpied
+            # msgpack
+            toPack = {'tstart':self.section['tstart']
+            ,'tstart':self.section['tstart'],'pars':npPacked}
+            packed = msgpack.packb(toPack
             , use_single_float=self.use_single_float)
             statistics[BytesRaw] += len(packed)
+
+            # compress, takes almost no time.
             if self.compress is not None:
                 compressed = self.compress(packed)
                 packed = msgpack.packb(compressed
                 , use_single_float=self.use_single_float)
             statistics[BytesFinal] += len(packed)
+
+            # write to file
             self.logbook.write(packed)
             self.logbook.flush()
 
+            # update statistics
             self._create_logSection()
             timestamp = time.time()
             dt = timestamp - periodic_update
+            statistics[LogTime] += timer() - logTime
             if dt > 10.:
                 periodic_update = timestamp
                 if not self.quiet:
-                    print(f'{time.strftime("%y-%m-%d %H:%M:%S")} Logged'
+                    dt = datetime.datetime.fromtimestamp(self.timestamp*Nano)
+                    print(f'{dt.strftime("%y-%m-%d %H:%M:%S")} Logged'
                     f' {statistics[NSections]} sections,'
                     f' {statistics[NParLists]} parLists,'
-                    f' {statistics[BytesFinal]/1000.} KBytes')
+                    f' {statistics[BytesFinal]/1000.} KBytes,'
+                    f' {round(statistics[BytesRaw]/statistics[LogTime]/1e6,1)} MB/s')                    
         except Exception as e:
             print(f'ERROR: Exception in serialize_sections: {e}')
 
         # logging is finished
         # rewrite the contentsSection
-        if self.dirSize:
-            self.logbook.seek(0)
-            self.logbook.write(self.packedContents)
+        self.logbook.seek(0)
+        self.logbook.write(self.packedContents)
 
         # print status
         msg = (f'Logging finished for {statistics[NSections]} sections,'
