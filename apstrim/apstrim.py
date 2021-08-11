@@ -6,12 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '2.0.1 2021-08-07'
-
-#TODO: consider to replace msgpack_numpy with something simple and predictable.
-#The use_single_float has no efect in msgPack,
-#TODO: check how ints are handled: ideally they should be dynamically
-#converted to int8,int16,int32 or int64 depending of its value.
+__version__ = '2.0.3 2021-08-11'
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -21,12 +16,10 @@ from timeit import default_timer as timer
 
 import numpy as np
 import msgpack
-#import msgpack_numpy
-#msgpack_numpy.patch()
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
-MinTimestamp = 1600000000000000000 # Minimal possible timestamp
+MinTimestamp = 1600000000 # Minimal possible timestamp
 MAXU8 = 256 - 1
 MAXI8 = int(256/2) - 1
 MAXU16 = int(256**2) - 1
@@ -149,7 +142,8 @@ class apstrim():
             self.compress = None
             abstract['compression'] = 'None'
         _printi(f'Abstract section: {self.abstractSection}')
-        self.par2Index = {p:i for i,p in enumerate(self.devPars)}
+        #self.par2Index = {p:i for i,p in enumerate(self.devPars)}
+        self.par2Index = [p for p in self.devPars]
         if len(self.par2Index) == 0:
             _printe(f'Could not build the list of parameters')
             sys,exit()
@@ -159,7 +153,8 @@ class apstrim():
         self._create_logSection()
 
         # subscribe to parameters
-        for pname in self.par2Index.keys():
+        #for pname in self.par2Index.keys():
+        for pname in self.par2Index:
             devPar = tuple(pname.rsplit(':',1))
             try:
                 self.publisher.subscribe(self._delivered, devPar)
@@ -243,11 +238,12 @@ class apstrim():
                         timestamp = int(timestamp/Nano)
                     if timestamp < MinTimestamp:
                         # Timestamp is wrong, discard the parameter
-                        #print(f'timestamp is wrong {timestamp, MinTimestamp}')
+                        _printd(f'timestamp is wrong {timestamp, MinTimestamp}')
                         continue
-                    skey = self.par2Index[dev+':'+par]
-                    self.timestamp = timestamp
-                    self.sectionPars[skey][SPTime].append(self.timestamp)
+                    #skey = self.par2Index[dev+':'+par]
+                    skey = self.par2Index.index(dev+':'+par)
+                    self.timestamp = int(timestamp*Nano)
+                    self.sectionPars[skey][SPTime].append(timestamp)
                     self.sectionPars[skey][SPVal].append(value)
                 elif devPar == 'ppmuser':# ADO has extra item, skip it.
                     continue
@@ -265,10 +261,11 @@ class apstrim():
                         if timestamp < MinTimestamp:
                             # Timestamp is wrong, discard the parameter
                             continue
-                        skey = self.par2Index[devPar+':'+par]
+                        #skey = self.par2Index[devPar+':'+par]
+                        skey = self.par2Index.index(dev+':'+par)
                         # add to parameter list
-                        self.timestamp = timestamp
-                        self.sectionPars[skey][SPTime].append(self.timestamp)
+                        self.timestamp = int(timestamp/Nano)
+                        self.sectionPars[skey][SPTime].append(timestamp)
                         #print( _croppedText(f'value: {value}'))
                         self.sectionPars[skey][SPVal].append(value)
                 #print(f'devPar {devPar}@{timestamp,skey}:{timestamp,value}')
@@ -286,8 +283,10 @@ class apstrim():
             try:
                 tstart = self.timestamp
             except:
-                tstart = int(time.time()/Nano)
-            self.sectionPars = {i:([],[]) for i in self.par2Index.values()}
+                #tstart = int(time.time()/Nano)
+                tstart = int(time.time())
+            #self.sectionPars = {i:([],[]) for i in self.par2Index.values()}
+            self.sectionPars = {i:([],[]) for i in range(len(self.par2Index))}
             self.section = {'tstart':tstart, 'tend':None
             ,'pars':self.sectionPars}
 
@@ -309,6 +308,7 @@ class apstrim():
             if rf <=1 or (statistics[NSections]%rf) == 0:
                 self.dataContents[self.section['tstart']]\
                 = self.logbook.tell()
+                #print(f'contentsSection:{self.contentsSection}')
                 packed = msgpack.packb(self.contentsSection)
                 if len(packed) < self.dirSize:
                     self.packedContents = packed
@@ -329,7 +329,7 @@ class apstrim():
             self.logbook.write(self.packedContents)
             self.logbook.seek(currentPos)
 
-            _printd(f'section {statistics[NSections]} is ready for writing to logbook @ {self.logbook.tell()}')
+            _printd(f'section{statistics[NSections]} {self.section["tstart"]} is ready for writing to logbook @ {self.logbook.tell()}')
             self.section['tend'] = self.timestamp
             statistics[NSections] += 1
 
@@ -377,7 +377,7 @@ class apstrim():
             if dt > 10.:
                 periodic_update = timestamp
                 if not self.quiet:
-                    dt = datetime.datetime.fromtimestamp(self.timestamp*Nano)
+                    dt = datetime.datetime.fromtimestamp(self.timestamp)
                     print(f'{dt.strftime("%y-%m-%d %H:%M:%S")} Logged'
                     f' {statistics[NSections]} sections,'
                     f' {statistics[NParLists]} parLists,'

@@ -7,8 +7,7 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-__version__ = 'v2.0.1 2021-08-08'#
-#TODO: the par2key is mapped to int now, therefore both par2key and key2par could be just lists, that could be faster.
+__version__ = 'v2.0.3 2021-08-11'#
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -27,7 +26,7 @@ def _croppedText(txt, limit=200):
         txt = txt[:limit]+'...'
     return txt
 
-def _nanoSeconds2Datetime(ns:int):
+def _seconds2Datetime(ns:int):
     from datetime import datetime
     dt = datetime.fromtimestamp(ns*Nano)
     return dt.strftime('%y%m%d_%H%M%S') 
@@ -92,7 +91,7 @@ class APScan():
         self.dirSize = 0
         self.directory = []
         for contents in self.unpacker:
-            #printvv(f'Table of contents: {contents}')
+            _printvv(_croppedText(f'Table of contents: {contents}'))
             try:
                 self.dirSize = contents['contents']['size']
             except:
@@ -122,8 +121,9 @@ class APScan():
                 continue
             if nSections == 2:# section: Index
                 #_printvv(f'Index@{self.logbook.tell()}: {section}')
-                self.par2key = section['index']
-                self.key2par = {value:key for key,value in self.par2key.items()}
+                par2key = section['index']
+                #self.key2par = {value:key for key,value in self.par2key.items()}
+                self.key2par = par2key
                 _printvv(f'Index@{self.logbook.tell()}: {self.key2par}')                
                 break
 
@@ -142,10 +142,7 @@ class APScan():
                 the data will be extracted starting from the startTime and
                 ending at the end of the logbook.
         
-        **items**:  List of items to extract. Item are coded with keys. 
-                The mapping of the Process Variables (PV) could be found in
-                the self.par2key map. The reversed mapping is in the 
-                self.key2par map.
+        **items**:  List of items to extract
         
         **startTime**: String for selecting start of the extraction interval. 
                 Format: YYMMDD_HHMMSS. Set it to None for the logbook
@@ -163,9 +160,12 @@ class APScan():
         endPosition = self.logbookSize
         readerBufferSize = bufSize
 
+        # create empty map for return
         if len(items) == 0: # enable handling of all items 
-            items = self.key2par.keys()
-        for key,par in self.key2par.items():
+            #items = self.key2par.keys()
+            items = [i for i in range(len(self.key2par))]
+        #for key,par in self.key2par.items():
+        for key,par in enumerate(self.key2par):
             if key not in parameterStatistics:
                 #print(f'add to stat[{len(parameterStatistics)+1}]: {key}') 
                 parameterStatistics[key] = 0
@@ -177,36 +177,35 @@ class APScan():
                print('ERROR. Directory is missing')
                sys.exit()
 
+        # determine a part of the logbook for extraction
         keys = list(self.directory.keys())
         if startTime is  None:
             firstTStamp = keys[0]
-            startTime = _nanoSeconds2Datetime(firstTStamp)
+            startTime = _seconds2Datetime(firstTStamp)
         firstDataSection, startTStamp, endSection, endTStamp\
         = _timeInterval(startTime, span)
         _printv(f'start,end:{firstDataSection, int(startTStamp*Nano), endSection, int(endTStamp*Nano)}')
 
         # position logbook to first data section
-        #if len(self.directory) != 0 and startTime:
         lk = len(keys)
+        bt = timer()
+        # find nearest_key ising bisect, that is fast, ~10us
         startSection_idx = bisect.bisect_left(keys, startTStamp)
         #print(f'nidx: {startSection_idx,startTStamp,endTStamp}')
         startSectionTStamp = keys[startSection_idx]
         if startSectionTStamp > startTStamp:
             startSection_idx -= 1
             startSectionTStamp = keys[max(startSection_idx,0)]
-        #print(f'nidx:  {nearest_idx,startTStamp}')
         endTStamp = startTStamp + span/Nano
         nearest_idx = min(bisect.bisect_left(keys, endTStamp),lk-1)
         lastSectionTStamp = keys[nearest_idx]
         if lastSectionTStamp < endTStamp:
             lastSectionTStamp = keys[min(nearest_idx+1,lk-1)]
-        
         self.position = self.directory[startSectionTStamp]
         endPosition = self.directory[lastSectionTStamp]
         _printvv(f'first dsection {self.position}')
         _printvv(f'last dsection {endPosition}')
         self.logbook.seek(self.position)
-
         _printvv(f'logbook@{self.logbook.tell()}, offset={self.dirSize}')
 
         # Try to read required sections into a buffer. If successful, then
@@ -228,7 +227,7 @@ class APScan():
             ', processing it sequentially'))
             streamReader = self.logbook
 
-        # re-create the Unpacker
+        # re-create the Unpacker to re-position it in the logbook
         self.unpacker = msgpack.Unpacker(streamReader, use_list=False
         ,strict_map_key=False) #use_list=False speeds up 20%
 
@@ -236,11 +235,14 @@ class APScan():
         nSections = 0
         if APScan.Verbosity >= 1:
             sectionTime = [0.]*3
-        startTStampNS = startTStamp*Nano
-        endTStampNS = endTStamp*Nano
-        extractionTime = time.time()
+        startTStampNS = startTStamp
+        endTStampNS = endTStamp
+        print(f'sts,ets:{startTStampNS,endTStampNS}')
+        extractionTime = 0.
         perfMonTime = 0.
+        timerTotal = timer()
         for section in self.unpacker:
+            extractionTStart = timer()
             nSections += 1
             # data sections
             _printv(f'Data Section: {nSections+startSection_idx}')
@@ -262,11 +264,11 @@ class APScan():
             except Exception as e:
                 print(f'WARNING: wrong section {nSections}: {str(section)[:75]}...', {e})
                 break
+            _printv(f"Data section {nSections}: {section['tstart']}")
 
             # iterate over parameters
             ts = timer()
-            perfMonTimeSum = 0.
-            if True:#try:
+            try:
                 # the following loop takes 90% time
                 for parIndex, tsValsNP in section['pars'].items():
                     if not parIndex in items:
@@ -294,42 +296,31 @@ class APScan():
 					#`````````Concatenation of parameter lists.``````````````
                     # Using numpy.concatenate turned to be very slow.
                     # The best performance is using list.extend() 
-
                     extracted[parIndex]['times'].extend(list(tstamps))
-
                     ts2 = timer()
-                    # Slowest code: 90% of time spent here
-                    '''
-                    if extracted[parIndex]['values'] is None:
-                        extracted[parIndex]['values'] = values
-                    else:
-                        extracted[parIndex]['values'] =\
-                        np.concatenate((extracted[parIndex]['values']
-                        ,values), axis=0)'''
-
-                    # that piece is 6 times faster:
                     extracted[parIndex]['values'].extend(list(values))
-                    perfMonTimeSum += timer() - ts2
+                    perfMonTime += timer() - ts2
                     #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
                     n = len(extracted[parIndex]['times'])
                     _printvv(f"par{parIndex}[{n}]")
                     parameterStatistics[parIndex] = n
 
-            else:#except Exception as e:
+            except Exception as e:
                 print(f'WARNING: in concatenation: {e}')
 
             dts = timer() - ts
             if APScan.Verbosity >= 1:
                 sectionTime[2] += dts
-            perfMonTime += perfMonTimeSum
+            extractionTime += timer() - extractionTStart
 
-        extractionTime = time.time() - extractionTime
         if APScan.Verbosity >= 1:
             print(f'SectionTime: {[round(i/nSections,6) for i in sectionTime]}')
         print(f'Deserialized from {self.logbookName}: {nSections} sections')
         print(f'Sets/Parameter: {parameterStatistics}')
-        mbps = f', {round(toRead/1e6/extractionTime,1)} MB/s'
-        print((f'Data Extraction time: {round(extractionTime,4)}, {mbps}'))
+        ttime = timer()-timerTotal
+        mbps = (f' {round(toRead/1e6/extractionTime,1)} MB/s'
+        f', including disk: {round(ttime,3)} s, {round(toRead/1e6/ttime,1)} MB/s')
+        print(f'Processing time: {round(extractionTime,3)} s, {mbps}')
         print(f'Spent {round(perfMonTime/extractionTime*100,1)}% in the monitored code.')
         return extracted

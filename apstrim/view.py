@@ -1,5 +1,5 @@
-"""Plot data from the aplog-generated files."""
-__version__ = 'v2.0.0 2021-08-04'#
+"""Plot data from the apstrim-generated files."""
+__version__ = 'v2.0.3 2021-08-11'#
  
 import sys, time, argparse, os
 from timeit import default_timer as timer
@@ -66,11 +66,11 @@ for fileName in pargs.files:
         for header in pargs.header:
             d = headers[header]
             if header == 'Directory':                
-                def nanoSeconds2Datetime(ns:int):
+                def seconds2Datetime(ns:int):
                     from datetime import datetime
-                    dt = datetime.fromtimestamp(ns*Nano)
+                    dt = datetime.fromtimestamp(ns)
                     return dt.strftime('%y%m%d_%H%M%S') 
-                d = {nanoSeconds2Datetime(ns):v for ns,v in d.items()}
+                d = {seconds2Datetime(ns):v for ns,v in d.items()}
             s = f'Header {header}:{{\n'
             s += f'{d}'[1:].replace(', ',',\t')
             print(s)
