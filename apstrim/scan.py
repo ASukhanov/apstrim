@@ -142,10 +142,12 @@ class APScan():
                 the data will be extracted starting from the startTime and
                 ending at the end of the logbook.
         
-        **items**:  List of items to extract
+        **items**:  List of integer indexes of items to extract. The map of
+         indexes to Control System parameters could be obtained using 
+         get_headers()['Index'].
         
         **startTime**: String for selecting start of the extraction interval. 
-                Format: YYMMDD_HHMMSS. Set it to None for the logbook
+                Format: YYMMDD_HHMMSS. If None then extraction starts from the
                 beginning. 
 
         **bufSize**:  Size of the bytesIO buffer. If file size is smaller than

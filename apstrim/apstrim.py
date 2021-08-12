@@ -95,7 +95,9 @@ class apstrim():
     
     **devPar**:     List of device:parameter strings.
     
-    **sectionInterval**:     Data collection interval for data sections.
+    **sectionInterval**:     Data collection period. Data are collected
+     continously into a section, which is periodically dumped into the
+     logbook file with this time interval (in seconds). 
     
     **compression**:        Enable Compression flag.
     
@@ -103,8 +105,11 @@ class apstrim():
     
     **use_single_float**:     Use single precision float type for float. (default: True)
     
-    **dirSize**:    Size of a Table Of Contents, which is used for random-access
-                retrieval.
+    **dirSize**:    Size of a Table Of Contents, which is written as a first
+     object in the logbook file. It contains file positions of sections and
+     used for random-access retrieval.
+     Default is 10KB, which is good for ~700 entries. If number of sections
+     becomes too big, then the table is downsampled twice to fit into this size. 
 """
     EventExit = threading.Event()
     """Calling the EventExit.set() will safely exit the application."""
@@ -170,7 +175,7 @@ class apstrim():
         If file is already exists then it will be renamed and
         a new file will be open with the provided name.
 
-        **howLong**: seconds to take data.
+        **howLong**: Time interval (seconds) for data collection.
         """
         self._eventStop.clear()
         self.howLong = howLong
