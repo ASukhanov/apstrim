@@ -7,7 +7,7 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-__version__ = 'v2.0.3 2021-08-11'#
+__version__ = 'v2.0.4 2021-08-12'#
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -26,9 +26,9 @@ def _croppedText(txt, limit=200):
         txt = txt[:limit]+'...'
     return txt
 
-def _seconds2Datetime(ns:int):
+def _seconds2Datetime(seconds:int):
     from datetime import datetime
-    dt = datetime.fromtimestamp(ns*Nano)
+    dt = datetime.fromtimestamp(seconds)
     return dt.strftime('%y%m%d_%H%M%S') 
 
 def _timeInterval(startTime, span):
@@ -41,7 +41,7 @@ def _timeInterval(startTime, span):
     endTime = min(endTime, 4102462799.)# 2099-12-31
     ttuple = time.localtime(endTime)
     endSection = time.strftime(TimeFormat_out, ttuple)
-    return firstDataSection, int(startTime/Nano), endSection, int(endTime/Nano)
+    return firstDataSection, int(startTime), endSection, int(endTime)
 
 def _unpacknp(data):
     if not isinstance(data,(tuple,list)):
@@ -57,6 +57,7 @@ def _unpacknp(data):
             buf = item['bytes']
             arr = np.frombuffer(buf, dtype=dtype).reshape(shape)
             if i == 0:
+                # timestamps converted from int(nanoseconds) to floats (with loss of precision) 
                 arr = arr * Nano#
             unpacked.append(arr)
         except Exception as e:
@@ -142,12 +143,10 @@ class APScan():
                 the data will be extracted starting from the startTime and
                 ending at the end of the logbook.
         
-        **items**:  List of integer indexes of items to extract. The map of
-         indexes to Control System parameters could be obtained using 
-         get_headers()['Index'].
+        **items**:  List of items to extract
         
         **startTime**: String for selecting start of the extraction interval. 
-                Format: YYMMDD_HHMMSS. If None then extraction starts from the
+                Format: YYMMDD_HHMMSS. Set it to None for the logbook
                 beginning. 
 
         **bufSize**:  Size of the bytesIO buffer. If file size is smaller than
@@ -156,7 +155,6 @@ class APScan():
                 Note, the Python3 read() for binary files is using very
                 effective buffering scheme, therefore using very large bufSize
                 have almost no effect on performance."""
-
         extracted = {}
         parameterStatistics = {}
         endPosition = self.logbookSize
@@ -184,24 +182,25 @@ class APScan():
         if startTime is  None:
             firstTStamp = keys[0]
             startTime = _seconds2Datetime(firstTStamp)
-        firstDataSection, startTStamp, endSection, endTStamp\
+        #print(f's,s:{startTime, span}')
+        firstDataSection, startTStampS, endSection, endTStampS\
         = _timeInterval(startTime, span)
-        _printv(f'start,end:{firstDataSection, int(startTStamp*Nano), endSection, int(endTStamp*Nano)}')
+        _printv(f'start,end:{firstDataSection, startTStampS, endSection, endTStampS}')
 
         # position logbook to first data section
         lk = len(keys)
         bt = timer()
         # find nearest_key ising bisect, that is fast, ~10us
-        startSection_idx = bisect.bisect_left(keys, startTStamp)
-        #print(f'nidx: {startSection_idx,startTStamp,endTStamp}')
+        startSection_idx = bisect.bisect_left(keys, startTStampS)
+        #print(f'bisect:{startTStampS,startSection_idx,keys}')
         startSectionTStamp = keys[startSection_idx]
-        if startSectionTStamp > startTStamp:
+        if startSectionTStamp > startTStampS:
             startSection_idx -= 1
             startSectionTStamp = keys[max(startSection_idx,0)]
-        endTStamp = startTStamp + span/Nano
-        nearest_idx = min(bisect.bisect_left(keys, endTStamp),lk-1)
+        endTStampS = startTStampS + span
+        nearest_idx = min(bisect.bisect_left(keys, endTStampS),lk-1)
         lastSectionTStamp = keys[nearest_idx]
-        if lastSectionTStamp < endTStamp:
+        if lastSectionTStamp < endTStampS:
             lastSectionTStamp = keys[min(nearest_idx+1,lk-1)]
         self.position = self.directory[startSectionTStamp]
         endPosition = self.directory[lastSectionTStamp]
@@ -214,6 +213,9 @@ class APScan():
         # the streamReader for unpacker will be this buffer, otherwise
         # it will be the logbook file.
         toRead =  endPosition - self.logbook.tell()
+        if toRead <= 0:
+            print('No data to read')
+            sys.exit()
         if toRead < readerBufferSize:
             ts = timer()
             rbuf = self.logbook.read(toRead)
@@ -237,9 +239,9 @@ class APScan():
         nSections = 0
         if APScan.Verbosity >= 1:
             sectionTime = [0.]*3
-        startTStampNS = startTStamp
-        endTStampNS = endTStamp
-        print(f'sts,ets:{startTStampNS,endTStampNS}')
+        startTStampNS = startTStampS/Nano
+        endTStampNS = endTStampS/Nano
+        #print(f'sts,ets:{int(startTStampNS),int(endTStampNS)}')
         extractionTime = 0.
         perfMonTime = 0.
         timerTotal = timer()
@@ -277,14 +279,15 @@ class APScan():
                         continue
                     tstamps, values = _unpacknp(tsValsNP)
 
-                    # trim array if needed
-                    if tstamps[0] < startTStampNS:
-                        first = bisect.bisect_left(tstamps, startTStampNS)
+                    # trim array {} if needed
+                    #print(f'sts {tstamps[0],startTStampS}')
+                    if tstamps[0] < startTStampS:
+                        first = bisect.bisect_left(tstamps, startTStampS)
                         tstamps = tstamps[first:]
                         values = values[first:]
                     try:
-                        if tstamps[-1] > endTStampNS:
-                            last = bisect.bisect_left(tstamps, endTStampNS)
+                        if tstamps[-1] > endTStampS:
+                            last = bisect.bisect_left(tstamps, endTStampS)
                             tstamps = tstamps[:last]
                             values = values[:last]
                     except: pass
@@ -295,7 +298,7 @@ class APScan():
                         print(f'vals{parIndex}[{len(values)}] {vshape}:')
                         print( _croppedText(f'{values}'))
 
-					#`````````Concatenation of parameter lists.``````````````
+                    #`````````Concatenation of parameter lists.``````````````
                     # Using numpy.concatenate turned to be very slow.
                     # The best performance is using list.extend() 
                     extracted[parIndex]['times'].extend(list(tstamps))
