@@ -1,5 +1,5 @@
 # apstrim
-Logger and extractor of Control System parameters (a.c.a EPICS PVs).
+Logger and extractor of Control System parameters (a.k.a EPICS PVs).
 
 - Supported infrastructures: ADO, EPICS, LITE.
 - Very fast random access retrieval of objects for selected time interval. Retrieval performance of 300 million of floats per second has been demonstrated.
@@ -8,7 +8,6 @@ Logger and extractor of Control System parameters (a.c.a EPICS PVs).
 - Data with different updating frequency can be mixed.
 - Self-describing data format, no schema required.
 - Efficient binary serialization format.
-- Like JSON. But it's faster and smaller. 
 - Numpy arrays supported.
 - Fast online compression.
 - Basic plotting of the logged data.
