@@ -32,7 +32,7 @@ requires additional package: **pyqtgraph**.
 
 ## Examples
 
-Serialization
+## Serialization
 
 	:python -m apstrim -nEPICS testAPD:scope1:MeanValue_RBV
 	pars: {'testAPD:scope1:MeanValue_RBV': ['0']}
@@ -64,6 +64,24 @@ Serialization
 	...
 	# Compression ratio = 1.9
 
+### De-serialization
 Example of deserialization and plotting of all parameters from several logbooks.
 
     python -m apstrim.view -i all -v -p *.aps
+
+Python code snippet to extract items 1,2 and 3 from a logbook
+for 20 seconds interval starting on 2021-08-12 at 23:31:31.
+
+```python
+from apstrim.scan import APScan
+apscan = APScan('aLogbook.aps')
+headers = apscan.get_headers()
+print(f'{headers["Index"]}')
+extracted = apscan.extract_objects(span=20, items=[1,2,3], startTime='210812_233131')
+print(f'{extracted[3]}')# print the extracted data for item[3]
+# returned:
+{'par': 'liteBridge.peakSimulator:rps',           # object (PV) name of the item[3]
+'times': [1628825500.8938403, 1628825510.898658], # list of the item[3] timestamps
+'values': [95.675125, 95.55396]}                  # list of the item[3] values
+```
+
