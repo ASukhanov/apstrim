@@ -4,7 +4,7 @@ Logger and extractor of Control System parameters (a.k.a EPICS PVs).
 - Supported Control Infrastructures: EPICS, ADO, LITE.
 - Typical speed of compressed serialization to a logbook file is 70 MB/s.
 - Fast random-access retrieval of objects for selected time interval.
-- De-serialization speed is up to 1200 MB/s when the logbook is chached in memory.
+- De-serialization speed is up to 1200 MB/s when the logbook is cached in memory.
 - Simultaneous serialization and de-serialization from the same logbook file.
 - Fast online compression.
 - Inhomogeneous and homogeneous data objects.
