@@ -2,16 +2,16 @@
 Logger and extractor of Control System parameters (a.k.a EPICS PVs).
 
 - Supported Control Infrastructures: EPICS, ADO, LITE.
-- Typical writing performance with compression: 70 MB/s.
-- Reading performance is up to 1200 MB/s when a logbook is chached in memory. 
-- Very fast random access retrieval of objects for selected time interval.
-- Inhomogeneous and homogeneous data are processed equally fast.
-- Scalar and vector data could be mixed.
-- Data with different updating frequency can be mixed.
-- Self-describing data format, no schema required.
-- Efficient binary serialization format.
-- Numpy arrays supported.
+- Typical speed of compressed serialization to a logbook file is 70 MB/s.
+- Fast random-access retrieval of objects for selected time interval.
+- De-serialization speed is up to 1200 MB/s when the logbook is chached in memory.
+- Simultaneous serialization and de-serialization from the same logbook file.
 - Fast online compression.
+- Inhomogeneous and homogeneous data objects.
+- Data with different updating frequency could be mixed in the data set.
+- Self-describing data format no schema required.
+- Efficient binary serialization format of data objects (msgpack).
+- Numpy arrays are supported.
 - Basic plotting of the logged data.
 - Data extraction from a logbook is allowed when the logbook is being written.
 
