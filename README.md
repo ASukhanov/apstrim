@@ -1,8 +1,10 @@
 # apstrim
 Logger and extractor of Control System parameters (a.k.a EPICS PVs).
 
-- Supported infrastructures: ADO, EPICS, LITE.
-- Very fast random access retrieval of objects for selected time interval. Retrieval performance of 300 million of floats per second has been demonstrated.
+- Supported Control Infrastructures: EPICS, ADO, LITE.
+- Typical writing performance with compression: 70 MB/s.
+- Reading performance is up to 1200 MB/s when a logbook is chached in memory. 
+- Very fast random access retrieval of objects for selected time interval.
 - Inhomogeneous and homogeneous data are processed equally fast.
 - Scalar and vector data could be mixed.
 - Data with different updating frequency can be mixed.
@@ -11,7 +13,7 @@ Logger and extractor of Control System parameters (a.k.a EPICS PVs).
 - Numpy arrays supported.
 - Fast online compression.
 - Basic plotting of the logged data.
-- Data extraction from a file is allowed when the file is being written.
+- Data extraction from a logbook is allowed when the logbook is being written.
 
 ## Installation
 Dependencies: **msgpack, caproto, lz4framed**. 
