@@ -1,5 +1,7 @@
-"""Plot data from the apstrim-generated files."""
-__version__ = 'v2.0.3 2021-08-11'#
+"""Plot data from the aplog-generated files."""
+__version__ = 'v2.0.5 2021-08-25'#
+
+#TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
  
 import sys, time, argparse, os
 from timeit import default_timer as timer
@@ -9,7 +11,10 @@ import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-from apstrim.scan import APScan, __version__ as scanVersion
+from apstrim.scan import APScan, msgpack, __version__ as scanVersion
+if msgpack.version < (1, 0, 2):
+    print(f'MessagePack too old: {msgpack.version}')
+    sys.exit()
 
 Nano = 1e-9
 def printv(msg):
@@ -22,7 +27,7 @@ def _croppedText(txt, limit=400):
 
 parser = argparse.ArgumentParser(description=__doc__
     ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    ,epilog=f'aplog scan : {scanVersion},  view: {__version__}')
+    ,epilog=f'aplog scan : {scanVersion},  view: {__version__}, MessagePack: {msgpack.version}')
 legalHeaders = 'Directory, Abstract, Index'
 parser.add_argument('-H', '--header', nargs='?', default='', help=\
 'Show all headers (-H) or selected header, legal values: '+legalHeaders)

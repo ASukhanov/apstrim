@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '2.0.3 2021-08-11'
+__version__ = '2.0.5 2021-08-25'
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -16,6 +16,9 @@ from timeit import default_timer as timer
 
 import numpy as np
 import msgpack
+if msgpack.version < (1, 0, 2):
+    print(f'MessagePack too old: {msgpack.version}')
+    sys.exit()
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -135,7 +138,7 @@ class apstrim():
         self.contents_downsampling_factor = 1# No downsampling 
 
         # create a section Abstract
-        self.abstractSection = {'abstract':{'apstrim ':__version__
+        self.abstractSection = {'abstract':{'apstrim':__version__, 'msgpack':msgpack.version
         , 'sectionInterval':sectionInterval}}
         abstract = self.abstractSection['abstract']
 
@@ -151,7 +154,7 @@ class apstrim():
         self.par2Index = [p for p in self.devPars]
         if len(self.par2Index) == 0:
             _printe(f'Could not build the list of parameters')
-            sys,exit()
+            sys.exit()
         _printi(f'parameters: {self.par2Index}')
 
         # a section has to be created before subscription
@@ -218,6 +221,7 @@ class apstrim():
 
     def stop(self):
         """Stop the streaming."""
+        _printd('>stop()')
         self._eventStop.set()
         #self.logbook.close()
 
@@ -245,7 +249,6 @@ class apstrim():
                         # Timestamp is wrong, discard the parameter
                         _printd(f'timestamp is wrong {timestamp, MinTimestamp}')
                         continue
-                    #skey = self.par2Index[dev+':'+par]
                     skey = self.par2Index.index(dev+':'+par)
                     self.timestamp = int(timestamp*Nano)
                     self.sectionPars[skey][SPTime].append(timestamp)
@@ -254,6 +257,7 @@ class apstrim():
                     continue
                 else:
                     #LITE packing:
+                    dev = devPar
                     pars = props
                     ##print( _croppedText(f'pars: {pars}'))
                     for par in pars:
@@ -266,10 +270,9 @@ class apstrim():
                         if timestamp < MinTimestamp:
                             # Timestamp is wrong, discard the parameter
                             continue
-                        #skey = self.par2Index[devPar+':'+par]
                         skey = self.par2Index.index(dev+':'+par)
                         # add to parameter list
-                        self.timestamp = int(timestamp/Nano)
+                        self.timestamp = int(timestamp*Nano)
                         self.sectionPars[skey][SPTime].append(timestamp)
                         #print( _croppedText(f'value: {value}'))
                         self.sectionPars[skey][SPVal].append(value)
@@ -296,18 +299,18 @@ class apstrim():
             ,'pars':self.sectionPars}
 
     def _serialize_sections(self):
-        #_printi('serialize_sections started')
         periodic_update = time.time()
         statistics = [0, 0, 0, 0, 0.]#
         NSections, NParLists, BytesRaw, BytesFinal, LogTime = 0,1,2,3,4
         maxSections = self.howLong//self.sectionInterval
+        _printd(f'serialize_sections started.')
         try:
-          while statistics[NSections] < maxSections\
+          while statistics[NSections] <= maxSections\
               and not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
             logTime = timer()
 
-            # register section in the table of contents,
+            # register the section in the table of contents,
             # this should be skipped when the contents downsampling is active.
             rf = self.contents_downsampling_factor
             if rf <=1 or (statistics[NSections]%rf) == 0:
@@ -328,15 +331,20 @@ class apstrim():
                     _printd(f'downsampled contentsSection:{self.contentsSection}')
                     self.packedContents = msgpack.packb(self.contentsSection)
 
-            # First section need to be written to file
+            # Update Directory section on the file.
             currentPos = self.logbook.tell()
             self.logbook.seek(0)
             self.logbook.write(self.packedContents)
             self.logbook.seek(currentPos)
 
-            _printd(f'section{statistics[NSections]} {self.section["tstart"]} is ready for writing to logbook @ {self.logbook.tell()}')
-            self.section['tend'] = self.timestamp
             statistics[NSections] += 1
+            _printd(f'section{statistics[NSections]} {self.section["tstart"]} is ready for writing to logbook @ {self.logbook.tell()}')
+            try:
+                self.section['tend'] = self.timestamp
+            except:
+                _printw(f'No data recorded in section {statistics[NSections]}')
+                #sys.exit()
+                continue
 
             # pack to numpy/bytes, they are very fast to unpack
             npPacked = {}
@@ -353,8 +361,8 @@ class apstrim():
                 print( _croppedText(f"npPacked: {self.section['tstart'], npPacked.keys()}"))
                 for i,kValues in enumerate(npPacked.items()):
                     print( _croppedText(f'Index{i}: {kValues[0]}'))
-                    for value in kValues[1]:
-                        print( _croppedText(f'Value{i}: {value}'))
+                    for ii,value in enumerate(kValues[1]):
+                        print( _croppedText(f'kValue{ii}[{len(value["bytes"])}]: {value}'))
 
             # msgpack
             toPack = {'tstart':self.section['tstart']

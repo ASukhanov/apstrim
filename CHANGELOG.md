@@ -1,5 +1,15 @@
 # Change Log for module apstrim
- 
+
+## [2.0.5] - 2021-08-25
+
+### Fixed
+
+Consistency check for MessagePack version.
+
+apstrim.py: False exit if span < section interval
+
+scan.py
+Short files showed no data.
 
 ## [2.0.2] - 2021-08-09
 

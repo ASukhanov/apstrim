@@ -7,7 +7,7 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-__version__ = 'v2.0.4 2021-08-12'#
+__version__ = 'v2.0.5 2021-08-24'#
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -105,7 +105,7 @@ class APScan():
         self.position = self.dirSize
         self.logbook.seek(self.position)
         self.unpacker = msgpack.Unpacker(self.logbook, use_list=False
-        ,strict_map_key=False) #use_lis=False speeds up 20%
+        ,strict_map_key=False) #use_list=False speeds up 20%
         nSections = 0
         for section in self.unpacker:
             #print(f'section:{nSections}')
@@ -197,13 +197,18 @@ class APScan():
         if startSectionTStamp > startTStampS:
             startSection_idx -= 1
             startSectionTStamp = keys[max(startSection_idx,0)]
-        endTStampS = startTStampS + span
-        nearest_idx = min(bisect.bisect_left(keys, endTStampS),lk-1)
-        lastSectionTStamp = keys[nearest_idx]
-        if lastSectionTStamp < endTStampS:
-            lastSectionTStamp = keys[min(nearest_idx+1,lk-1)]
         self.position = self.directory[startSectionTStamp]
-        endPosition = self.directory[lastSectionTStamp]
+
+        endTStampS = startTStampS + span
+        nearest_idx = bisect.bisect_left(keys, endTStampS)
+        if nearest_idx == lk:
+            lastSectionTStamp = keys[lk-1]
+            endPosition = self.logbookSize
+        else:
+            lastSectionTStamp = keys[nearest_idx]
+            if lastSectionTStamp < endTStampS:
+                lastSectionTStamp = keys[min(nearest_idx+1,lk-1)]
+            endPosition = self.directory[lastSectionTStamp]
         _printvv(f'first dsection {self.position}')
         _printvv(f'last dsection {endPosition}')
         self.logbook.seek(self.position)

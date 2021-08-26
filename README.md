@@ -1,19 +1,18 @@
 # apstrim
-Logger and extractor of Control System parameters (a.k.a EPICS PVs).
+Logger and extractor of time-series data (e.g. EPICS PVs).
 
-- Supported Control Infrastructures: EPICS, ADO, LITE.
-- Typical speed of compressed serialization to a logbook file is 70 MB/s.
-- Fast random-access retrieval of objects for selected time interval.
-- De-serialization speed is up to 1200 MB/s when the logbook is chached in memory.
-- Simultaneous serialization and de-serialization from the same logbook file.
+- Data are objects, indexed in time order.
+- Supported Control Infrastructures: EPICS, ADO, LITE. Easy extendable.
+- Wide range of data objects: strings, lists, maps, numpy arrays, custom.
+- Data objects could be inhomogeneous and have arbitrary frequency.
+- Self-describing data format, no schema required.
+- Data objects are binary-serialized using MessagePack.
 - Fast online compression.
-- Inhomogeneous and homogeneous data objects.
-- Data with different updating frequency could be mixed in the data set.
-- Self-describing data format no schema required.
-- Efficient binary serialization format of data objects (msgpack).
-- Numpy arrays are supported.
+- Fast random-access retrieval of data objects for selected time interval.
+- Simultaneous writing and reading.
+- Typical speed of compressed serialization to a logbook file is 80 MB/s.
+- De-serialization speed is up to 1200 MB/s when the logbook is cached in memory.
 - Basic plotting of the logged data.
-- Data extraction from a logbook is allowed when the logbook is being written.
 
 ## Installation
 Dependencies: **msgpack, caproto, lz4framed**. 
@@ -34,40 +33,34 @@ requires additional package: **pyqtgraph**.
 
 ## Serialization
 
-	:python -m apstrim -nEPICS testAPD:scope1:MeanValue_RBV
-	pars: {'testAPD:scope1:MeanValue_RBV': ['0']}
-	21-06-19 11:06:57 Logged 61 paragraphs, 1.36 KBytes
+	# Serialization of one float64 parameter from an EPICS simulated scope IOC:
+	:python -m apstrim -nEPICS -T59 testAPD:scope1:MeanValue_RBV
+	Logging finished for 1 sections, 1 parLists, 7.263 KB.
 	...
 
-	:python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV
-	pars: {'testAPD:scope1:MeanValue_RBV': ['0']}
-	21-06-19 11:10:35 Logged 61 paragraphs, 1.06 KBytes
+    # The same with compression:
+	:python -m apstrim -nEPICS -T59 testAPD:scope1:MeanValue_RBV --compress
+    Logging finished for 1 sections, 1 parLists, 6.101 KB. Compression ratio:1.19
 	...
-	# Compression ratio = 1.28
 
-    :python -m apstrim -nEPICS testAPD:scope1:MeanValue_RBV,Waveform_RBV
-    21-06-18 22:51:15 Logged 122 paragraphs, 492.837 KBytes
-    ...
-
-    :python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV,Waveform_RBV
-    21-06-19 11:04:58 Logged 122 paragraphs, 492.682 KBytes
+    # Serialization 1000-element array and one scalar of floats:
+    :python -m apstrim -nEPICS -T59 testAPD:scope1:MeanValue_RBV,Waveform_RBV --compress
+    Logging finished for 1 sections, 2 parLists, 2405.354 KB. Compression ratio:1.0
 	...
 	# Note, Compression is poor for floating point arrays with high entropy.
 
-	python -m apstrim -nLITE liteHost:dev1:cycle
-	pars: {'acnlin23:dev1:cycle': ['0']}
-	21-06-19 11:16:42 Logged 5729 paragraphs, 103.14 KBytes
-	...
-
+	# Serialization of an incrementing integer parameter:
 	:python -m apstrim -nLITE --compress liteHost:dev1:cycle
-	21-06-19 11:18:02 Logged 5733 paragraphs, 53.75 KBytes
+    Logging finished for 1 sections, 1 parLists, 56.526 KB. Compression ratio:1.25
 	...
-	# Compression ratio = 1.9
+	# In this case the normalized compressed volume is 9.3 bytes per entry.
+	# Each entry consist of an int64 timestamp and an int64 value, which would 
+	# occupy 16 bytes per entry using standard writing.
 
 ### De-serialization
 Example of deserialization and plotting of all parameters from several logbooks.
 
-    python -m apstrim.view -i all -v -p *.aps
+    python -m apstrim.view -i all -p *.aps
 
 Python code snippet to extract items 1,2 and 3 from a logbook
 for 20 seconds interval starting on 2021-08-12 at 23:31:31.

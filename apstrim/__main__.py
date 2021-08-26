@@ -1,5 +1,6 @@
 Description = '''Serializer of Process Variables (from EPICS infrastructure)
 or Data Objects from other infrastructures, e.g. ADO or LITE).'''
+__version__ = '2.0.5 2021-08-25'
 
 import sys, argparse
 from .apstrim  import apstrim, __version__
@@ -60,12 +61,8 @@ def main():
     , quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
     aps.start(pargs.outfile, howLong=pargs.acqTime)
 
-    timeSpan = 0 #pargs.sectionTime*2 + 5
-    txt = f'for {round(timeSpan/60., 2)} m' if timeSpan else 'endlessly'
+    txt = f'for {round(pargs.acqTime/60., 2)} m' if pargs.acqTime<99e6 else 'endlessly'
     print(f'Streaming started {txt}, press Ctrl/C to stop.')
-    if timeSpan:
-        aps.eventExit.wait(timeSpan)
-        aps.stop()
 
 if __name__ == '__main__':
     main()
