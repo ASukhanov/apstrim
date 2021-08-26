@@ -14,6 +14,8 @@ Logger and extractor of time-series data (e.g. EPICS PVs).
 - De-serialization speed is up to 1200 MB/s when the logbook is cached in memory.
 - Basic plotting of the logged data.
 
+<img src='/docs/apstrim_file_format.png' width='400'>
+
 ## Installation
 Dependencies: **msgpack, caproto, lz4framed**. 
 These packages will be installed using pip:
