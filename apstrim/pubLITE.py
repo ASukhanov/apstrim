@@ -1,102 +1,25 @@
-# Copyright (c) 2021 Andrei Sukhanov. All rights reserved.
-#
-# Licensed under the MIT License, (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
-#
-
-"""Base class for accessing multiple Data Objects, served by a liteServer.
-#``````````````````Usage:`````````````````````````````````````````````````````
-ipython3
-import pupLITE as LA 
-from pprint import pprint
-
-# If the name resolution using liteCNS is not configured, then
-# replace Scaler1 with an IP address of the the host name of the liteScaler. 
-LAserver = 'Scaler1:server'
-LAdev1   = 'Scaler1:dev1'
-LAdev2   = 'Scaler1:dev2'
-    #``````````````Info```````````````````````````````````````````````````````
-    # list of all devices on a server
-#DNW#pprint(list(LA.PVs([[['Scaler1','*'],'*']]).info()))
-    # info on all parameters of the 'Scaler1','server'
-pprint(LA.PVs((LAserver,'*')).info())
-    # info on single parameter
-pprint(LA.PVs((LAserver,'timeShift')).info())
-    # info on multiple parameters
-#DNW#pprint(LA.PVs((LAserver,('timeShift','perf')).info())
-    #``````````````Get```````````````````````````````````````````````````````
-    # get all parameters from device LAserver
-pprint(LA.PVs((LAserver,'*')).get())
-    # get single parameter from device Scaler1:server:
-pprint(LA.PVs((LAserver,    'perf')).get()) # or:
-pprint(LA.PVs((('Scaler1','server'),'perf')).get())
-    # get multiple parameters from device Scaler1:server: 
-pprint(LA.PVs((LAserver,('perf','timeShift'))).get())
-    # get multiple parameters from multiple devices 
-pprint(LA.PVs((LAdev1,('time','frequency')),(LAdev2,('time','coordinate'))).get())
-    # simplified get: returns (value,timestamp) of a parameter 'perf' 
-pprint(LA.PVs((LAserver,'perf')).value)
-    #``````````````Read```````````````````````````````````````````````````````
-    # get all readable parameters from device Scaler1:server, which have been modified since the last read
-print(LA.PVs((LAserver,'*')).read())#TODO
-    #``````````````Set````````````````````````````````````````````````````````
-    # simplified set, for single parameter:
-LA.PVs((LAdev1,'frequency')).value = [1.1]
-    # explicit set, could be used for multiple parameters:
-LA.PVs((LAdev1,'frequency')).set([1.1])
-pprint(LA.PVs([[['Scaler1','dev1'],'frequency']]).value)
-    # multiple set
-LA.PVs([[['Scaler1','dev1'],['frequency','coordinate']]]).set([8.,[3.,4.]])
-LA.PVs([[['Scaler1','dev1'],['frequency','coordinate']]]).get()
-    #``````````````Subscribe``````````````````````````````````````````````````
-ldo = LA.PVs([[['Scaler1','dev1'],'cycle']])
-ldo.subscribe()# it will print image data periodically
-ldo.unsubscribe()# cancel the subscruption
-
-#``````````````````Programmatic way, using Access`````````````````````````````
-# Advantage: The previuosly created PVs are reused
-LAserver = 'Scaler1:server'
-LA.Access.get((LAserver,'*'))
-LA.Access.subscribe(LA.testCallback,(LAdev1,'cycle'))
-LA.Access.subscribe(LA.testCallback,(LAdev2,'time'))
-
-    # test for timeout, should timeout in 10s:
-#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-#''''''''''''''''''Using Access interface`````````````````````````````````````
-LA.Access.subscribe(LA.testCallback,(LAdev1,('cycle','time')))
-LA.Access.unsubscribe()
-
-#``````````````````TODO``````````````````````````````````````````````````````` 
-#ldo = LA.PVs([[['localhost','dev1'],'*']])
-#ldo.subscribe()
-#LA.PVs(['Scaler1.dev1','frequency']).set(property=('oplimits',[-1,11])
-#``````````````````Observations```````````````````````````````````````````````
-    # Measured transaction time is 1.8ms for:
-LA.PVs([[['Scaler1','dev1'],['frequency','command']]]).get()
-    # Measured transaction time is 6.4ms per 61 KBytes for:
-LA.PVs([[['Scaler1','dev1'],'*']]).read() 
-#``````````````````Tips```````````````````````````````````````````````````````
-To enable debugging: LA.PVs.Dbg = True
-To enable transaction timing: LA.Channel.Perf = True  
+"""Module for accessing multiple Process Variables, served by a liteServer.
 """
-#__version__ = 'v64 2021-05-04'# raising exceptions instead of returning error code.
-__version__ = 'v65 2021-06-10'# subscription sockets are blocking now
+__version__ = '2.0.0a 2023-03-20'# MessagePack encoding
 
-
-print('liteAccess '+__version__)
+#TODO: replace ubjson with mgspack
 
 import sys, time, socket
 from os import getpid
 import getpass
-from timeit import default_timer as timer
+from timeit import default_timer as _timer
 import threading
 recvLock = threading.Lock()
-
+receive_dictio_lock = threading.Lock()
 #from pprint import pformat, pprint
-import ubjson
+
+# object encoding
+#import ubjson
+#encoderDump = ubjson.dumpb
+#encoderLoad = ubjson.loadb
+import msgpack
+encoderDump = msgpack.dumps
+encoderLoad = msgpack.loads
 
 #````````````````````````````Globals``````````````````````````````````````````
 UDP = True
@@ -109,42 +32,54 @@ NSDelimiter = ':'# delimiter in the name field
 Username = getpass.getuser()
 Program = sys.argv[0]
 PID = getpid()
-#print(f'liteAccess user:{Username}, PID:{PID}, program:{Program}')
+def get_user():
+    print(f'liteAcces user:{Username}, PID:{PID}, program:{Program}')
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 #````````````````````````````Helper functions`````````````````````````````````
 MaxPrint = 500
-def croppedText(obj, limit=200):
+def _croppedText(obj, limit=200):
     txt = str(obj)
     if len(txt) > limit:
         txt = txt[:limit]+'...'
     return txt
-def printTime(): return time.strftime("%m%d:%H%M%S")
-def printi(msg): 
-    print(croppedText(f'INFO.LA@{printTime()}: '+msg))
+def _printTime(): return time.strftime("%m%d:%H%M%S")
+def _printi(msg): 
+    print(_croppedText(f'INFO.LA@{_printTime()}: '+msg))
 
-def printw(msg):
-    msg = msg = croppedText(f'WARN.LA@{printTime()}: '+msg)
+def _printw(msg):
+    msg = msg = _croppedText(f'WARN.LA@{_printTime()}: '+msg)
     print(msg)
     #Device.setServerStatusText(msg)
 
-def printe(msg): 
-    msg = croppedText(f'ERROR.LA@{printTime()}: '+msg)
+def _printe(msg): 
+    msg = _croppedText(f'ERROR.LA@{_printTime()}: '+msg)
     print(msg)
     #Device.setServerStatusText(msg)
 
-def printd(msg):
+def _printv(msg):
     if PVs.Dbg or Access.Dbg : print('Dbg.LA: '+msg)
 
-def croppedText(txt, limit=200):
+def _croppedText(txt, limit=200):
     if len(txt) > limit:
         txt = txt[:limit]+'...'
     return txt
 
-def testCallback(args):
-    printi(croppedText(f'>testCallback({args})'))
+def testCallbackPrint(args):
+    _printi(_croppedText(f'>testCallback({args})'))
 
-def printCallback(args):
-    print(f'subcribed item received:\n{args}')
+ReceiverStatistics = {'records':0, 'acks':0, 'bytes':0., 'retrans':0, 'time':0.}
+ReceiverStatisticsLast = ReceiverStatistics.copy()
+def testCallback(args):
+    global ReceiverStatisticsLast
+    dt = 10.
+    ct = time.time()
+    if ct - ReceiverStatisticsLast["time"] >= dt:
+        stat = ReceiverStatistics.copy()
+        del stat['time']
+        for i in stat:
+            stat[i] = (stat[i] - ReceiverStatisticsLast[i])
+        print(f'Received in last {dt}s: {stat}')
+        ReceiverStatisticsLast = ReceiverStatistics.copy()
 
 def ip_address():
     """Platform-independent way to get local host IP address"""
@@ -157,17 +92,17 @@ def _hostPort(cnsNameDev:tuple):
     registered records, or from the name service"""
     global CNSMap
     if len(cnsNameDev) == 1:
-        printe(f'Device name wrong: {cnsNameDev}, should be of the form: host:dev')
+        _printe(f'Device name wrong: {cnsNameDev}, should be of the form: host:dev')
         sys.exit(1)
     cnsName,dev = cnsNameDev
     if isinstance(cnsName,list):
         cnsName = tuple(cnsName)
-    # printd(f'>_hostPort: {cnsNameDev}')
+    # _printv(f'>_hostPort: {cnsNameDev}')
     try:  
         hp,dev = CNSMap[cnsName]# check if cnsName is in local map
     except  KeyError:
         from . import liteCNS
-        printi(f'cnsName {cnsName} not in local map: {CNSMap}')
+        _printi(f'cnsName {cnsName} not in local map: {CNSMap}')
         try:
             hp = liteCNS.hostPort(cnsName)
         #except NameError:
@@ -175,22 +110,23 @@ def _hostPort(cnsNameDev:tuple):
             msg = (f'The host name {cnsName} is not in liteCNS: {e}\n'
                 f"Trying to use it as is: '{cnsName}'")
             #raise   NameError(msg)
-            printw(msg)
+            _printw(msg)
             hp = cnsName
         # register externally resolved cnsName in local map
         hp = hp.split(';')
         hp = tuple(hp) if len(hp)==2 else (hp[0],Port)            
-        #printi('cnsName %s is locally registered as '%cnsName+str((hp,dev)))
+        #_printi('cnsName %s is locally registered as '%cnsName+str((hp,dev)))
         CNSMap[cnsName] = hp,dev
-        printi(f'Assuming host,port: {hp}')
+        _printi(f'Assuming host,port: {hp}')
     except ValueError:
-        printe(f'Device name {cnsName} wrong, it should be in form host:device ')
+        _printe(f'Device name {cnsName} wrong, it should be in form host:device ')
         sys.exit(1)
     h,p = hp
     try:
         h = socket.gethostbyname(h)
     except:
-        printe(f'Could not resolve host name {h}') 
+        _printe(f'Could not resolve host name {h}')
+        sys.exit(1)
     return h,p
 
 retransmitInProgress = None
@@ -202,30 +138,40 @@ def _recvUdp(sock, socketSize):
     global retransmitInProgress
     chunks = {sock:{}}
     tryMore = 5# Max number of allowed lost packets
-    ts = timer()
+    ts = _timer()
     ignoreEOD = 3
 
     def ask_retransmit(offsetSize):
         global retransmitInProgress
+        ReceiverStatistics['retrans'] += 1
         retransmitInProgress = tuple(offsetSize)
         cmd = {'cmd':('retransmit',offsetSize)}
-        printi(f'Asking to retransmit port {port}: {cmd}')
-        sock.sendto(ubjson.dumpb(cmd),addr)
+        _printi(f'Asking to retransmit port {port}: {cmd}')
+        sock.sendto(encoderDump(cmd),addr)
     
     while tryMore:
         try:
             buf, addr = sock.recvfrom(socketSize)
+            ReceiverStatistics["records"] += 1
+            ReceiverStatistics["bytes"] += len(buf)
+            ReceiverStatistics["time"] = time.time()
+            
         #else:#except Exception as e:
         except socket.timeout as e:
             msg = f'Timeout in recvfrom port {port}'
-            printi(msg)
+            _printi(msg)
             raise
+            # Don not return, raise exception, otherwise the pypet will not recover
+            #_printw(msg)
+            #return [],0
+            #return ('WARNING: '+msg).encode(), 0
+            #buf = None
         if buf is None:
             raise RuntimeError(msg)
         size = len(buf) - PrefixLength
         offset = int.from_bytes(buf[:PrefixLength],'big')# python3
         
-        #DNPprinti(f'chunk received at port {port}: {offset,size}')
+        #DNP_printi(f'chunk received at port {port}: {offset,size}')
 
         if size > 0:
             chunks[sock][offset,size] = buf[PrefixLength:]
@@ -241,18 +187,24 @@ def _recvUdp(sock, socketSize):
                 continue
             else:
                 msg = f'Looks like first chunk is missing at port {port}'
-                printw(msg)
+                _printw(msg)
                 #This is hard to recover. Give up
                 return [],0
+                #return ('WARNING: '+msg).encode(), addr
+                # sortedKeys = sorted(chunks[sock])
+                # offsetSize = [0,sortedKeys[0][0]]
+                # allAssembled = False
+                # ask_retransmit(offsetSize)
+                # break
         else:
             #print('First chunk received')
             pass
 
         if retransmitInProgress is not None:
             if (offset,size) in chunks[sock]:
-                printi(f'retransmission received {offset,size}')
+                _printi(f'retransmission received {offset,size}')
             else:
-                printw(f'server failed to retransmit chunk {retransmitInProgress}')
+                _printw(f'server failed to retransmit chunk {retransmitInProgress}')
                 tryMore = 1
             retransmitInProgress = None
 
@@ -268,7 +220,7 @@ def _recvUdp(sock, socketSize):
                 l = offset - last
                 if l > 65536:
                     msg = f'Lost too many bytes at port {port}: {last,l}, data discarded'
-                    printw(msg)
+                    _printw(msg)
                     #raise RuntimeError(msg)
                     return [],0
                     #return 'WARNING: '+msg, addr
@@ -281,85 +233,102 @@ def _recvUdp(sock, socketSize):
             break
         #print(f'tryMore: {tryMore}')
         tryMore -= 1
-    ts1 = timer()
+    ts1 = _timer()
         
     if not allAssembled:
         msg = 'Partial assembly of %i frames'%len(chunks[sock])
         #raise BufferError(msg)
-        printw(msg)
+        _printw(msg)
         return [],0
         #return ('WARNING: '+msg).encode(), addr
 
     data = bytearray()
     sortedKeys = sorted(chunks[sock])
     for offset,size in sortedKeys:
-        # printd('assembled offset,size '+str((offset,size)))
+        # _printv('assembled offset,size '+str((offset,size)))
         data += chunks[sock][(offset,size)]
-    tf = timer()
+    tf = _timer()
     # if len(data) > 500000:
-        # printd('received %i bytes in %.3fs, assembled in %.6fs'\
+        # _printv('received %i bytes in %.3fs, assembled in %.6fs'\
         # %(len(data),ts1-ts,tf-ts1))
-    #printi('assembled %i bytes'%len(data))
+    #_printi('assembled %i bytes'%len(data))
     return data, addr
 
-def send_dictio(dictio, sock, hostPort:tuple):
+def _send_dictio(dictio, sock, hostPort:tuple):
     """low level send"""
     global LastDictio
     LastDictio = dictio.copy()
-    # printd('executing: '+str(dictio))
+    _printv('executing: '+str(dictio))
     dictio['username'] = Username
     dictio['program'] = Program
     dictio['pid'] = PID
-    # printd(f'send_dictio to {hostPort}: {dictio}')
-    encoded = ubjson.dumpb(dictio)
+    # _printv(f'send_dictio to {hostPort}: {dictio}')
+    encoded = encoderDump(dictio)
     if UDP:
         sock.sendto(encoded, hostPort)
     else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.connect(hostPort)
-        except Exception as e:
-            printe('in sock.connect:'+str(e))
-            sys.exit()
         sock.sendall(encoded)
 
-def send_cmd(cmd, devParDict:dict, sock, hostPort:tuple, values=None):
+def _send_cmd(cmd, devParDict:dict, sock, hostPort:tuple, values=None):
     import copy
-    #DNPprint(f'send_cmd({cmd}.{devParDict}')
+    _printv(f'_send_cmd({cmd}.{devParDict} to {sock}')
     if cmd == 'set':
         if len(devParDict) != 1:
             raise ValueError('Set is supported for single device only')
+        #devParDict = copy.deepcopy(devParDict)# that is IMPORTANT! otherwise setting in liteScaler.yaml is failing 
+        #for key,value in zip(devParDict,values):
+        #    devParDict[key] += 'v',value
         for key in devParDict:
             devParDict[key] += 'v',values
     devParList = list(devParDict.items())
     dictio = {'cmd':(cmd,devParList)}
-    # printd('sending cmd: '+str(dictio))
-    send_dictio(dictio, sock, hostPort)
+    _printv('sending cmd: '+str(dictio))
+    _send_dictio(dictio, sock, hostPort)
 
-def llTransaction(dictio, sock, hostPort:tuple):
-    # low level transaction
-    send_dictio(dictio, sock, hostPort)
-    return  receve_dictio()
-
-def receive_dictio(sock, hostPort:tuple):
-    '''Receive and decode message from associated socket'''
-    # printd('\n>receive_dictio')
+def _receive_dictio(sock, hostPort:tuple):
+  """Receive and decode message from associated socket"""
+  with receive_dictio_lock:
+    # _printv('\n>receive_dictio')
     if UDP:
         data, addr = _recvUdp(sock, socketSize)
         # acknowledge the receiving
-        sock.sendto(b'ACK', hostPort)
-    #printd('received %i of '%len(data)+str(type(data))+' from '+str(addr)':')
+        if Access.dbgDrop_Ack > 0:
+            Access.dbgDrop_Ack -= 1
+        else:
+            try:
+                sock.sendto(b'ACK', hostPort)
+                ReceiverStatistics['acks'] += 1
+            except OSError as e:
+                _printw(f'OSError: {e}')
+            # _printv(f'ACK sent to {hostPort}')
+            #self.sock.sendto(b'ACK', self.hostPort)
+            #_printv('ACK2 sent to '+str(self.hostPort))
+    else:
+        print(f'>recv timeout:{sock.gettimeout()} `{sock}`')
+        if True:#try:
+            data = sock.recv(socketSize)
+            if len(data) == 0:
+                msg = f'Connection closed by server: {sock}'
+                _printe(msg)
+                raise ConnectionError(msg)
+            addr = '?'
+        else:#except Exception as e:
+            _printw('in sock.recv:'+str(e))
+            return {}
+
+    #print('received %i bytes'%(len(data)))
+    #_printv('received %i of '%len(data)+str(type(data))+' from '+str(addr)':')
     # decode received data
     # allow exception here, it will be caught in execute_cmd
     if len(data) == 0:
-        printw(f'empty reply for: {LastDictio}')
+        _printw(f'empty reply for: {LastDictio}')
         return {}
     try:
-        decoded = ubjson.loadb(data)
+        decoded = encoderLoad(data)
     except Exception as e:
-        printw(f'exception in ubjson.load Data[{len(data)}]: {e}')
+        _printw(f'exception in ubjson.load Data[{len(data)}]: {e}')
         #print(str(data)[:150])
-        #raise ValueError('in receive_dictio: '+msg)
+        #raise ValueError('in _receive_dictio: '+msg)
         return {}
     #for key,val in decoded.items():
     #    print(f'received from {key}: {val.keys()}')
@@ -367,27 +336,33 @@ def receive_dictio(sock, hostPort:tuple):
     if not isinstance(decoded,dict):
         #print('decoded is not dict')
         return decoded
-    for cnsDev in decoded:
-        # items could be numpy arrays, the following should decode everything:
-        parDict = decoded[cnsDev]
-        for parName,item in list(parDict.items()):
-            # printd(f'parName {parName}: {parDict[parName].keys()}')
-            # check if it is numpy array
-            shapeDtype = parDict[parName].get('numpy')
-            if shapeDtype is not None:
-                #print(f'par {parName} is numpy {shapeDtype}')
-                shape,dtype = shapeDtype
-                v = parDict[parName]['value']
-                # it is numpy array
-                from numpy import frombuffer
-                parDict[parName]['value'] =\
-                    frombuffer(v,dtype).reshape(shape)
-                del parDict[parName]['numpy']
-            else:
-                #print(f'not numpy {parName}')
-                pass
-    # printd(f'<receive_dictio')
-    return decoded
+    # JSON does not allow tuples as a keys, therefore the key is a combined string: hos:dev:par
+    # Split the key strings to tuple ('host:dev','par).
+    parDict = {}
+    for (key, value) in decoded.items():
+        key = tuple(key.rsplit(':',1))
+        if len(key) == 1:
+            key = key[0]
+        parDict[key] = value
+    for parName,item in list(parDict.items()):
+        # items could by numpy arrays, the following should decode everything:
+        # _printv(f'parName {parName}: {parDict[parName].keys()}')
+        # check if it is numpy array
+        shapeDtype = parDict[parName].get('numpy')
+        if shapeDtype is not None:
+            #print(f'par {parName} is numpy {shapeDtype}')
+            shape,dtype = shapeDtype
+            v = parDict[parName]['value']
+            # it is numpy array
+            from numpy import frombuffer
+            parDict[parName]['value'] =\
+                frombuffer(v,dtype).reshape(shape)
+            del parDict[parName]['numpy']
+        else:
+            #print(f'not numpy {parName}')
+            pass
+    #print(f'\ndecoded: {parDict}')
+    return parDict
 
 class Subscriber():
     def __init__(self, hostPort:tuple, devParDict:dict, callback):
@@ -399,39 +374,59 @@ class Subscriber():
 class SubscriptionSocket():
     event = threading.Event()
     '''handles all subscriptions to single hostPort'''
-    def __init__(self, hostPort):
-        #printi(f'>subsSocket {hostPort}')
+    def __init__(self, hostPort, sock):
+        #_printi(f'>subsSocket {hostPort}')
         self.name = f'{hostPort}'
         self.hostPort = tuple(hostPort)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #self.socket.bind(self.hostPort)
+        if UDP:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        else:
+            self.socket = sock
+        '''
+        else:
+            
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            host,serverport = self.hostPort
+            listeningPort = serverport+37
+            print(f'binding to {listeningPort}')
+            sock.bind(('',listeningPort))# Symbolic name meaning all available interfaces
+            sock.listen()
+            sock.settimeout(1)
+            self.socket, addr = sock.accept()
+            self.socket.settimeout(1)
+            print(f'Subscriber connected by {addr}, hp:{self.hostPort}')
+        '''
         self.callback = None# holds the callback for checking
-        
         dispatchMode = 'Thread'
         if dispatchMode == 'Thread':
             self.selector = None
-            #self.socket.settimeout(10)
-            #self.thread = thread_with_exception(target=self.receivingThread, args=[])
+            self.socket.settimeout(20)
             self.thread = threading.Thread(target=self.receivingThread)
             self.thread.daemon = True
             self.event.clear()
             self.thread.start()
 
     def receivingThread(self):
-        #printi(f'>receiving thread started for {self.hostPort}') 
+        _printi(f'>receiving thread started for {self.hostPort}') 
         while not self.event.is_set():
             try:
-                dictio = receive_dictio(self.socket, self.hostPort)
+                _printv(f'>subscription receive_dict {self.socket}')
+                try:
+                    dictio = _receive_dictio(self.socket, self.hostPort)
+                except Exception as e:
+                    _printe(f'Exception in subscription thread: {e}')
+                    continue
             #except socket.timeout as e:
             #except RuntimeError as e:
             except Exception as e:
                 msg = f'in subscription thread socket {self.name}: '+str(e)
-                printw(msg)
+                _printw(msg)
                 raise
                 #dictio = {'WARNING':msg}
                 #dictio = None
             self.dispatch(dictio)
-        printi(f'<receiving thread stopped for {self.hostPort}') 
+        _printi(f'<receiving thread stopped for {self.hostPort}') 
         
     def subscribe(self, subscriber):
         if self.socket is None:
@@ -439,73 +434,76 @@ class SubscriptionSocket():
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # just checking:
         if subscriber.hostPort != self.hostPort:
-            printe(f'Subscribe logic error in {self.name}')# this should never happen
-        #printd(f'subscribing {subscriber.name}')
+            _printe(f'Subscribe logic error in {self.name}')# this should never happen
+        #_printv(f'subscribing {subscriber.name}')
         if self.callback is None:
             self.callback = subscriber.callback
         else:
             if self.callback != subscriber.callback:
-                printe(f'Only one callback is supported per hostPort, subscription for {subscriber.name} is discarded')
+                _printe(f'Only one callback is supported per hostPort, subscription for {subscriber.name} is discarded')
                 return
         self.event.clear()
-        send_cmd('subscribe', subscriber.devParDict, self.socket\
+        _send_cmd('subscribe', subscriber.devParDict, self.socket\
         , self.hostPort)
 
     def unsubscribe_all(self):
-        printi(f'unsubscribing {self.hostPort}, {self.socket}')
+        _printi(f'unsubscribing {self.hostPort}, {self.socket}')
         if self.socket is None:
             return
-        send_cmd('unsubscribe', {'*':'*'}, self.socket, self.hostPort)
-        printi(f'killing thread of {self.name}')
+        _send_cmd('unsubscribe', {'*':'*'}, self.socket, self.hostPort)
+        _printi(f'killing thread of {self.name}')
         self.event.set()
+        #self.thread.raise_exception()
         print(f'shutting down {self.hostPort}')
         try:    self.socket.shutdown(socket.SHUT_RDWR)
         except Exception as e: 
-            printw(f'Exception in shutting down: {e}')
+            _printw(f'Exception in shutting down: {e}')
         print(f'closing down {self.hostPort}')
         try:    self.socket.close()
         except Exception as e: 
-            printw(f'Exception in closing: {e}')
+            _printw(f'Exception in closing: {e}')
         self.socket = None
 
     def dispatch(self, dictio):
         if dictio:
-            #printi(croppedText(f'>dispatch {dictio}'))
+            #_printi(_croppedText(f'>dispatch {dictio}'))
             self.callback(dictio)
         else:
-            printw(f'empty data from {self.hostPort}')
+            _printw(f'empty data from {self.hostPort}')
+            #if self.selector:
+            #    self.selector.unregister(self.socket)
+            #self.socket.close()
             return
     
 subscriptionSockets = {}
 
-def add_subscriber(hostPort:tuple, devParDict:dict, callback=testCallback):
+def _add_subscriber(hostPort:tuple, devParDict:dict, sock, callback=testCallback):
     subscriber = Subscriber(hostPort, devParDict, callback)
     #self.subscribers[subscriber.name] = subscriber
 
     # register new socket if not registered yet
-    try:
-        ssocket = subscriptionSockets[hostPort]
-    except:
-        ssocket = SubscriptionSocket(hostPort)
-        subscriptionSockets[hostPort] =  ssocket
-        #printd(f'new socket in publishingHouse: {hostPort}')
-    subscriptionSockets[hostPort] = ssocket
-    ssocket.subscribe(subscriber)
+    subsSocket = subscriptionSockets.get(hostPort)
+    if subsSocket is None:
+        print(f'adding new subscriber {hostPort}')
+        subsSocket = SubscriptionSocket(hostPort, sock)
+        subscriptionSockets[hostPort] =  subsSocket
+        #_printv(f'new socket in publishingHouse: {hostPort}')
+    subscriptionSockets[hostPort] = subsSocket
+    subsSocket.subscribe(subscriber)
 
 def unsubscribe_all():
     global subscriptionSockets
-    for hostPort,ssocket in subscriptionSockets.items():
-        ssocket.unsubscribe_all()
+    for hostPort,subsSocket in subscriptionSockets.items():
+        subsSocket.unsubscribe_all()
     subscriptionSockets = {}
-    printi('all unsibscribed')
+    _printi('all unsibscribed')
 
-#TODO: cache the channel sockets for reuse
 pvSockets = {}
 class Channel():
     Perf = False
     """Provides access to host;port"""#[(dev1,[pars1]),(dev2,[pars2]),...]
     def __init__(self, hostPort:tuple, devParDict={}, timeout=10):
-        # printd(f'>Channel {hostPort,devParDict}')
+        _printv(f'>Channel {hostPort,devParDict}')
         self.devParDict = devParDict
         host = hostPort[0]
         if host.lower() in ('','localhost'):
@@ -513,33 +511,48 @@ class Channel():
         try:    port = int(hostPort[1])
         except: port = 9700
         self.hostPort = host,port
+        self.timeout = timeout
         self.name = f'{self.hostPort}'
         self.recvMax = 1024*1024*4
         if UDP:
+            #_printv('Try to reuse existing socket')
             self.sock = pvSockets.get(self.hostPort)
             if self.sock is None:
+                # _printv('There is no sockets for thay host, create a new socket')
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                #self.sock.bind((self.lHost,self.lPort)) # bind is not necessary for client, an automatic bind() will take place using system assigned local port number
                 self.sock.settimeout(timeout)
                 pvSockets[self.hostPort] = self.sock
-                
-        #print('%s client of %s, timeout %s'
-        #%(('TCP','UDP')[UDP],str((self.sHost,self.sPort)),str(timeout)))
-
-    def _llTransaction(self, dictio):
-        # low level transaction
-        send_dictio(dictio, self.sock, self.hostPort)
-        return receive_dictio(self.sock, self.hostPort)
-
-    def _sendCmd(self, cmd, values=None):
-        r = send_cmd(cmd, self.devParDict, self.sock, self.hostPort, values)
+        else:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(self.timeout)
+            try:
+                self.sock.connect(self.hostPort)
+            except Exception as e:
+                _printe('in sock.connect:'+str(e))
+                sys.exit()
+        '''
+        else:
+            self.sock = pvSockets.get(self.hostPort)
+            if self.sock is None:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                #self.sock.bind((self.lHost,self.lPort)) # bind is not necessary for client, an automatic bind() will take place using system assigned local port number
+                self.sock.connect(self.hostPort)
+                self.sock.settimeout(timeout)
+                pvSockets[self.hostPort] = self.sock
+        '''
+        _printv(f'<Channel {hostPort,devParDict}: {self.sock}')
 
     def _transaction(self, cmd, value=None):
         # normal transaction: send command, receive response
-        if Channel.Perf: ts = timer()
-        self._sendCmd(cmd,value)
-        r = receive_dictio(self.sock, self.hostPort)
-        if Channel.Perf: print('transaction time: %.5f'%(timer()-ts))
-        # printd(f'reply from channel {self.name}: {r}')
+        if Channel.Perf: ts = _timer()
+        #_printv(f'channel send to {self.sock}: {cmd,value}')
+        r = _send_cmd(cmd, self.devParDict, self.sock, self.hostPort, value)
+        r = _receive_dictio(self.sock, self.hostPort)
+        if not UDP:
+            self.sock.close()
+        if Channel.Perf: print('transaction time: %.5f'%(_timer()-ts))
+        #_printv(f'reply from channel {self.name}: {r}')
         return r
     
 class PVs(object): #inheritance from object is needed in python2 for properties to work
@@ -547,13 +560,12 @@ class PVs(object): #inheritance from object is needed in python2 for properties 
     Dbg = False
     subscriptionsCancelled = True
 
-    def __init__(self, *ldoPars, timeout=5):
-        self.timeout = timeout
-        # printd(f'``````````````````Instantiating PVs ldoPars:{ldoPars}')        
+    def __init__(self, *ldoPars):
+        # _printv(f'``````````````````Instantiating PVs ldoPars:{ldoPars}')        
         # unpack arguments to hosRequest map
         self.channelMap = {}
         if isinstance(ldoPars[0], str):
-            printe('Device,parameter should be a list or tuple')
+            _printe('Device,parameter should be a list or tuple')
             return
             sys.exit(1)
         for ldoPar in ldoPars:
@@ -562,7 +574,7 @@ class PVs(object): #inheritance from object is needed in python2 for properties 
             try:    ldo = ldo.split(NSDelimiter)
             except: pass
             ldo = tuple(ldo)
-            # printd(f'ldo,Pars:{ldo,pars}')            
+            # _printv(f'ldo,Pars:{ldo,pars}')
             if isinstance(pars,str): pars = [pars]
             # ldo is in form: (hostName,devName)
             ldoHost = _hostPort(ldo)
@@ -571,30 +583,27 @@ class PVs(object): #inheritance from object is needed in python2 for properties 
             #print('ldoHost,cnsNameDev',ldoHost,cnsNameDev)
             if ldoHost not in self.channelMap:
                 self.channelMap[ldoHost] = {cnsNameDev:[pars]}
-                # printd(f'created self.channelMap[{ldoHost,self.channelMap[ldoHost]}')
+                # _printv(f'created self.channelMap[{ldoHost,self.channelMap[ldoHost]}')
             else:
                 try:
-                    # printd(f'appending old cnsNameDev {ldoHost,cnsNameDev} with {pars[0]}')
+                    # _printv(f'appending old cnsNameDev {ldoHost,cnsNameDev} with {pars[0]}')
                     self.channelMap[ldoHost][cnsNameDev][0].append(pars[0])
                 except:
-                    # printd(f'creating new cnsNameDev {ldoHost,cnsNameDev} with {pars[0]}')
+                    # _printv(f'creating new cnsNameDev {ldoHost,cnsNameDev} with {pars[0]}')
                     self.channelMap[ldoHost][cnsNameDev] = [pars]
                 #print(('updated self.channelMap[%s]='%ldoHost\
                 #+ str(self.channelMap[ldoHost]))
         channelList = list(self.channelMap.items())
-        # printd(f',,,,,,,,,,,,,,,,,,,channelList constructed: {channelList}')
+        # _printv(f',,,,,,,,,,,,,,,,,,,channelList constructed: {channelList}')
         self.channels = [Channel(*i) for i in channelList]
         return
-
-    def devices(self):
-        """Return list of devices on associated host;port"""
-        return self.channels[0]._llTransaction({'cmd':['info']})
 
     def info(self):
         for channel in self.channels:
             return channel._transaction('info')
 
     def get(self):
+        
         for channel in self.channels:
             return channel._transaction('get')
 
@@ -605,7 +614,7 @@ class PVs(object): #inheritance from object is needed in python2 for properties 
                 return firstDict
             firstValsTDict = list(firstDict.values())[0]
         else:#except Exception as e:
-            printw('in _firstValueAndTime: '+str(e))
+            _printw('in _firstValueAndTime: '+str(e))
             return (None,)
         # skip parameter key
         firstValsTDict = list(firstValsTDict.values())[0]
@@ -646,7 +655,7 @@ class PVs(object): #inheritance from object is needed in python2 for properties 
         if len(self.channels) > 1:
             raise NameError('subscription is supported only for single host;port')
         channel = self.channels[0]
-        add_subscriber(channel.hostPort, channel.devParDict, callback)
+        _add_subscriber(channel.hostPort, channel.devParDict, channel.sock, callback)
 
     def unsubscribe(self):
         unsubscribe_all()
@@ -666,6 +675,7 @@ class Access():
     _Subscriptions = []
     __version__ = __version__
     Dbg = False
+    dbgDrop_Ack = 0# Debugging. Number of ACK to drop.
 
     def info(*devParNames):
         return PVs(*devParNames).info()
@@ -680,7 +690,7 @@ class Access():
 
     def subscribe(callback, *devParNames):
         if not callable(callback):
-            printe(('subscribe arguments are wrong,'
+            _printe(('subscribe arguments are wrong,'
             'expected: subscribe(callback,(dev,par))'))
             return
         pvs = PVs(*devParNames)
