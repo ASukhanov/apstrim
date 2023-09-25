@@ -1,6 +1,6 @@
 Description = '''Serializer of Process Variables (from EPICS infrastructure)
 or Data Objects from other infrastructures, e.g. ADO or LITE).'''
-__version__ = '2.0.5 2021-08-25'
+__version__ = '3.0.0 2023-09-24'# pubLITE removed, use_single_float removed
 
 import sys, argparse
 from .apstrim  import apstrim, __version__
@@ -14,8 +14,8 @@ def main():
     'Enable online compression')
     #parser.add_argument('-D', '--dirSize', type=int, default=10240, help=\
     #'Size of a directory section, set it to 0 to disable random access retrieval')
-    parser.add_argument('-d', '--doublePrecision', action='store_true', help=\
-    'Disable conversion of float64 to float32')
+    #parser.add_argument('-d', '--doublePrecision', action='store_true', help=\
+    #'Disable conversion of float64 to float32')
     #parser.add_argument('-f', '--file', default=None, help=\
     #'Configuration file')
     parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
@@ -37,7 +37,7 @@ def main():
 
     s = pargs.namespace.upper()
     if s == 'LITE':
-        from .pubLITE import Access as publisher
+        from liteaccess import Access as publisher
     elif s == 'EPICS':
         from .pubEPICS import Access
         publisher = Access()
@@ -58,7 +58,8 @@ def main():
 
     apstrim.Verbosity = pargs.verbose
     aps = apstrim(publisher, pvNames, pargs.sectionTime, compress=pargs.compress
-    , quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
+    #, quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
+    , quiet=pargs.quiet)
     aps.start(pargs.outfile, howLong=pargs.acqTime)
 
     txt = f'for {round(pargs.acqTime/60., 2)} m' if pargs.acqTime<99e6 else 'endlessly'

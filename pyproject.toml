@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apstrim"
+version = "3.0.0"
+authors = [
+  { name="Andrei Sukhanov", email="cyxandr@gmail.com" },
+]
+description = "Logger and extractor of time-series data (e.g. EPICS PVs or liteServer LDOs)."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "msgpack",
+    "liteAccess",
+    "caproto",
+]
+[project.urls]
+"Homepage" = "https://github.com/ASukhanov/apstrim"
+"Bug Tracker" = "https://github.com/ASukhanov/apstrim/issues"

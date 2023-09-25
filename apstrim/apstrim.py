@@ -6,7 +6,8 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '2.0.5 2021-08-25'
+__version__ = '3.0.0 2023-09-24'
+#TODO: Check if all PVs are alive before logging started
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -15,10 +16,17 @@ import signal
 from timeit import default_timer as timer
 
 import numpy as np
-import msgpack
-if msgpack.version < (1, 0, 2):
+
+import msgpack as encoder
+if encoder.version < (1, 0, 2):
     print(f'MessagePack too old: {msgpack.version}')
     sys.exit()
+def encoderDump(buf):
+    return encoder.packb(buf, use_single_float=True) 
+
+# Try CBOR encoding
+#import cbor2 as encoder
+#encoderDump = encoder.dumps
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -121,8 +129,10 @@ class apstrim():
     _eventStop = threading.Event()
 
     def __init__(self, publisher, devPars:list, sectionInterval=60.
-    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
-        #_printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+#    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
+    , compress=False, quiet=False, dirSize=10240):
+        _printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+        print(f'v: {self.Verbosity}')
         signal.signal(signal.SIGINT, _safeExit)
         signal.signal(signal.SIGTERM, _safeExit)
 
@@ -131,15 +141,15 @@ class apstrim():
         self.devPars = devPars
         self.sectionInterval = sectionInterval
         self.quiet = quiet
-        self.use_single_float = use_single_float
+        #self.use_single_float = use_single_float
 
         # table of contents - related variables
         self.dirSize = dirSize
         self.contents_downsampling_factor = 1# No downsampling 
 
         # create a section Abstract
-        self.abstractSection = {'abstract':{'apstrim':__version__, 'msgpack':msgpack.version
-        , 'sectionInterval':sectionInterval}}
+        self.abstractSection = {'abstract':{'apstrim':__version__,
+            'encoder':encoder.__name__, 'sectionInterval':sectionInterval}}
         abstract = self.abstractSection['abstract']
 
         if compress:
@@ -164,14 +174,14 @@ class apstrim():
         #for pname in self.par2Index.keys():
         for pname in self.par2Index:
             devPar = tuple(pname.rsplit(':',1))
+            _printd(f'Subscribing: {devPar}')
             try:
                 self.publisher.subscribe(self._delivered, devPar)
             except:# Exception as e:
                 _printe(f'Could not subscribe  for {pname}')#: {e}')
                 continue
 
-        self.indexSection = msgpack.packb({'index':self.par2Index}
-        , use_single_float=self.use_single_float)
+        self.indexSection = encoderDump({'index':self.par2Index})
 
     def start(self, fileName='apstrim.aps', howLong=99e6):
         """Start the streaming of the data objects to the logbook file.
@@ -199,14 +209,13 @@ class apstrim():
         # write a preliminary 'Table of contents' section
         self.contentsSection = {'contents':{'size':self.dirSize}, 'data':{}}
         self.dataContents = self.contentsSection['data']
-        self.logbook.write(msgpack.packb(self.contentsSection))
+        self.logbook.write(encoderDump(self.contentsSection))
         # skip the 'Table of contents' zone of the logbook
         self.logbook.seek(self.dirSize)
 
         # write the sections Abstract and Index
         _printd(f'write Abstract@{self.logbook.tell()}')
-        self.logbook.write(msgpack.packb(self.abstractSection
-        , use_single_float=self.use_single_float))
+        self.logbook.write(encoderDump(self.abstractSection))
         _printd(f'write Index@{self.logbook.tell()}')
         self.logbook.write(self.indexSection)
         savedPos = self.logbook.tell()
@@ -229,7 +238,7 @@ class apstrim():
         """Callback, specified in the subscribe() request. 
         Called when the requested data have been changed.
         args is a map of delivered objects."""
-        #print(f'delivered: {args}')
+        #_printd(f'delivered: {args}')
         #self.timestampedMap = {}
         with self.lock:
           for devPar,props in args[0].items():
@@ -316,8 +325,7 @@ class apstrim():
             if rf <=1 or (statistics[NSections]%rf) == 0:
                 self.dataContents[self.section['tstart']]\
                 = self.logbook.tell()
-                #print(f'contentsSection:{self.contentsSection}')
-                packed = msgpack.packb(self.contentsSection)
+                packed = encoderDump(self.contentsSection)
                 if len(packed) < self.dirSize:
                     self.packedContents = packed
                 else:
@@ -329,7 +337,7 @@ class apstrim():
                       [::self.contents_downsampling_factor])
                     self.contentsSection['data'] = downsampled_contents
                     _printd(f'downsampled contentsSection:{self.contentsSection}')
-                    self.packedContents = msgpack.packb(self.contentsSection)
+                    self.packedContents = encoderDump(self.contentsSection)
 
             # Update Directory section on the file.
             currentPos = self.logbook.tell()
@@ -367,15 +375,13 @@ class apstrim():
             # msgpack
             toPack = {'tstart':self.section['tstart']
             ,'tstart':self.section['tstart'],'pars':npPacked}
-            packed = msgpack.packb(toPack
-            , use_single_float=self.use_single_float)
+            packed = encoderDump(toPack)
             statistics[BytesRaw] += len(packed)
 
             # compress, takes almost no time.
             if self.compress is not None:
                 compressed = self.compress(packed)
-                packed = msgpack.packb(compressed
-                , use_single_float=self.use_single_float)
+                packed = encoderDump(compressed)
             statistics[BytesFinal] += len(packed)
 
             # write to file

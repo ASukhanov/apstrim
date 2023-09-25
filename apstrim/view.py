@@ -1,23 +1,19 @@
 """Plot data from the aplog-generated files."""
-__version__ = 'v2.0.6 2023-03-21'# qtpy, 
-
+__version__ = 'v3.0.0 2023-09-24'#
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
- 
+#TODO: Dataset option does not work
+
 import sys, time, argparse, os
 from timeit import default_timer as timer
 from functools import partial
 import numpy as np
 from qtpy import QtWidgets as QW, QtCore#, QtGui
-#from qtpy.QtWidgets import QApplication, QMainWindow, QGridLayout
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox.ViewBoxMenu import ViewBoxMenu
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-from apstrim.scan import APScan, msgpack, __version__ as scanVersion
-if msgpack.version < (1, 0, 2):
-    print(f'MessagePack too old: {msgpack.version}')
-    sys.exit()
+from apstrim.scan import APScan, __version__ as scanVersion
 
 Nano = 1e-9
 def printv(msg):
@@ -30,12 +26,12 @@ def _croppedText(txt, limit=400):
 
 parser = argparse.ArgumentParser(description=__doc__
     ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    ,epilog=f'aplog scan : {scanVersion},  view: {__version__}, MessagePack: {msgpack.version}')
+    ,epilog=f'aplog scan : {scanVersion},  view: {__version__}')
 choices = ['Directory', 'Abstract', 'Index', 'None']
 parser.add_argument('-H', '--header', default='None', choices=choices, help=\
 'Show all headers (-H) or selected header')
 parser.add_argument('-i', '--items', help=('Items to plot. Legal values: "all" or '
-'string of comma-separated keys of the parameter map e.g. "1,3,5,7,..."'))
+'string of comma-separated keys of the parameter map e.g. "0,1,3,5,7,..."'))
 parser.add_argument('-p', '--plot', action='store_true', help=
 """Plot data using pyqtgraph""")
 parser.add_argument('-s', '--startTime', help=
@@ -77,7 +73,7 @@ for fileName in pargs.files:
             d = headers[header]
             s = f'Header {header}:{{\n'
             if header == 'Index':
-                d = {i+1:v for i,v in enumerate(d)}
+                d = {i:v for i,v in enumerate(d)}
             elif header == 'Directory':                
                 def seconds2Datetime(ns:int):
                     from datetime import datetime
@@ -364,7 +360,7 @@ class CustomViewBox(pg.ViewBox):
 
         #listOfItems = gMapOfPlotWidgets[self.dockName].getPlotItem().listDataItems()
         for row,curveName in enumerate(curves):
-            print(f'row: {row}')
+            printv(f'row: {row}')
             tbl.insertRow(row)
             #curveName = dataitem.name()
             printv(f'curveName: {curveName}')
