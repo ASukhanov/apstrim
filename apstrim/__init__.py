@@ -29,19 +29,25 @@ python -m apstrim -nEPICS --compress testAPD:scope1:MeanValue_RBV,Waveform_RBV
 python -m apstrim -nLITE --compress liteHost:dev1:cycle,y
 
 # De-serialization and plotting of the logged data files
-python -m apstrim.plot *.aps
+python -m apstrim.plot file.aps -iall -p
 
 Example of Python usage for EPICS infrastructure:
 
-import apstrim
-from apstrim.pubEPICS import Access as publisher
-pvNames = ['testAPD:scope1:MeanValue_RBV','testAPD:scope1:Waveform_RBV']
-aps = apstrim.apstrim(publisher, pvNames)
-aps.start('myLogbook.aps')
+>>> import apstrim
+>>> from apstrim.pubEPICS import Access
+>>> #Access.Dbg = True# To enable debugging in the publisher
+>>> pvNames = ['testAPD:scope1:MeanValue_RBV','testAPD:scope1:Waveform_RBV']
+>>> #apstrim.apstrim.Verbosity = 1# to enable debugging in apstrim
+>>> aps = apstrim.apstrim(Access, pvNames)
+>>> aps.start('myLogbook.aps')
+... Every minute it should be printing logging progress:
+... 24-10-21 10:59:44 Logged 1 sections, 2 parLists, 482.552 KBytes, 212.7 MB/s
 ...
-aps.stop()
+>>> aps.stop()
+24-10-21 11:00:15 Logged 2 sections, 4 parLists, 731.943 KBytes, 249.6 MB/s
+Logging finished for 2 sections, 4 parLists, 731.943 KB.
 """
 
 from .apstrim import apstrim
 
-__version__ = '2.0.5'
+#__version__ = '2.0.5'

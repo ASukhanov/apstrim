@@ -1,6 +1,6 @@
 Description = '''Serializer of Process Variables (from EPICS infrastructure)
 or Data Objects from other infrastructures, e.g. ADO or LITE).'''
-__version__ = '3.0.0 2023-09-24'# pubLITE removed, use_single_float removed
+__version__ = '3.1.0 2024-10-21'# conform to pubEPICS 3.1.0, wait for eventStop() after starting.
 
 import sys, argparse
 from .apstrim  import apstrim, __version__
@@ -39,8 +39,7 @@ def main():
     if s == 'LITE':
         from liteaccess import Access as publisher
     elif s == 'EPICS':
-        from .pubEPICS import Access
-        publisher = Access()
+        from .pubEPICS import Access as publisher
     else:
         print(f'ERROR: Unsupported namespace {s}')
         sys.exit(1)
@@ -64,6 +63,7 @@ def main():
 
     txt = f'for {round(pargs.acqTime/60., 2)} m' if pargs.acqTime<99e6 else 'endlessly'
     print(f'Streaming started {txt}, press Ctrl/C to stop.')
+    apstrim._eventStop.wait()
 
 if __name__ == '__main__':
     main()

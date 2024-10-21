@@ -9,8 +9,8 @@
 
 """Basic EPICS access API using caproto: a pure-Python Channel Access protocol library
 """
-__version__ = 'v02 2021-06-01'# 
-print(f'{__file__}, {__version__}')
+__version__ = 'v3.1.0 2023-10-21'# Access() is static class 
+print(f'pubEPICS: {__file__}, {__version__}')
 
 #from timeit import default_timer as timer
 
@@ -22,31 +22,29 @@ dbg = True
 CA_data_type_STRING = 14
 
 def printd(msg):
-    if dbg:
+    if Access.Dbg:
         print(f'CPAccess:{msg}')
     
 class Access():
-    __version__ = __version__
     Dbg = False
+    __version__ = __version__
+    _Subscriptions = []
+    _PVCache = {}
 
-    def __init__(self):
-        self.PVCache = {}# cache of PVs
-        self.subscriptions = []
-
-    def _get_pv(self, pvName):
-        r = self.PVCache.get(pvName)
+    def _get_pv(pvName):
+        r = Access._PVCache.get(pvName)
         if r is not None:
             pv,*_ = r
         else:
             #print( f'register pv {pvName}')
             pv,*_ = Ctx.get_pvs(pvName, timeout=2)
             #print(f'>pvCache: {pv}')
-            self.PVCache[pvName] = [pv, None, None]
-            self._fill_PVCacheProps(pvName)
+            Access._PVCache[pvName] = [pv, None, None]
+            Access._fill_PVCacheProps(pvName)
         return pv
     
-    def _fill_PVCacheProps(self, pvName):
-        pv = self.PVCache[pvName][PVC_PV]
+    def _fill_PVCacheProps(pvName):
+        pv = Access._PVCache[pvName][PVC_PV]
         if pv is None:
             return None
         pvData = pv.read(data_type='time')
@@ -110,9 +108,9 @@ class Access():
             if 'legalValues' in props:
                 del props['legalValues']
         #printd(f'_props {props}')
-        self.PVCache[pvName][PVC_Props] = props
+        Access._PVCache[pvName][PVC_Props] = props
     
-    def _unpack_ReadNotifyResponse(self, pvName, pvData):
+    def _unpack_ReadNotifyResponse(pvName, pvData):
         #printd('>uRNR')
         val = pvData.data
         if len(val) == 1:
@@ -129,7 +127,7 @@ class Access():
         rDict['timestamp'] = pvData.metadata.timestamp
         ##printd(f'uRNR1:{rDict}')
     
-        legalValues = self.PVCache[pvName][PVC_Props].get('legalValues')
+        legalValues = Access._PVCache[pvName][PVC_Props].get('legalValues')
         #printd(f'uRNR2:{legalValues}')
         if legalValues is not None:
             #rDict['value'] = legalValues[int(val)]
@@ -145,28 +143,28 @@ class Access():
         #printd(f'<uRNR:{rDict}')
         return rDict
     
-    def info(self, devParName):
+    def info(devParName):
         """Abridged PV info"""
         pvName = ':'.join(devParName)
-        pv = self._get_pv(pvName)
-        return {pvName:self.PVCache[pvName][PVC_Props]}
+        pv = Access._get_pv(pvName)
+        return {pvName:Access._PVCache[pvName][PVC_Props]}
 
 
-    def get(self, devParName, **kwargs):
+    def get(devParName, **kwargs):
         pvName = ':'.join(devParName)
-        pv = self._get_pv(pvName)
+        pv = Access._get_pv(pvName)
         pvData = pv.read(data_type='time')
-        rDict = self._unpack_ReadNotifyResponse(pvName, pvData)
+        rDict = Access._unpack_ReadNotifyResponse(pvName, pvData)
         return rDict
 
-    def set(self, devParValue):
+    def set(devParValue):
         dev, par, value = devParValue
         #print(f'epicsAccess.set({dev,par,value})')
         pvName = ':'.join((dev,par))
-        pv = self._get_pv(pvName)
+        pv = Access._get_pv(pvName)
         try: # if PV has legalValues then the value should be index of legalValues
-            value = self.PVCache[pvName][PVC_Props]['legalValues'].index(value)
-            #lv = self.PVCache[pvName][PVC_Props]['legalValues']
+            value = Access._PVCache[pvName][PVC_Props]['legalValues'].index(value)
+            #lv = Access._PVCache[pvName][PVC_Props]['legalValues']
             #print(f'lv:{lv}')
         except Exception as e:
             #print(f'in epicsAccess.set. Value not in legalValues: {e}')
@@ -174,15 +172,15 @@ class Access():
         pv.write(value)
         return 1
 
-    def _callback(self, subscription, pvData):
-        #print(f'>epicsAccess._callback: {pvData})')
+    def _callback(subscription, pvData):
+        printd(f'>epicsAccess._callback: {pvData})')
         #tMark = [timer(), 0., 0.]
         pvName = subscription.pv.name
-        rDict = self._unpack_ReadNotifyResponse(pvName, pvData)
+        rDict = Access._unpack_ReadNotifyResponse(pvName, pvData)
         #tMark[1] = timer()
         #printd(f'rDict for {pvName}:{rDict}')
-        #printd(f'self.PVCache:{self.PVCache}')
-        cache = self.PVCache.get(pvName)
+        #printd(f'Access._PVCache:{Access._PVCache}')
+        cache = Access._PVCache.get(pvName)
         #printd(f'cache[{len(cache)}]:{cache}')
         cb = cache[PVC_CB]
         #printd(f'cb:{str(cb)}')
@@ -192,23 +190,24 @@ class Access():
         #tMark[2] = timer() - tMark[1]
         #tMark[1] -= tMark[0]
         ##printd(f'caproto cb times {tMark}')# 20-30 uS
-        #printd('<callback')
+        printd('<callback')
         
-    def subscribe(self, callback, devParName):
+    def subscribe(callback, devParName):
+        printd('>subscribe')
         pvName = ':'.join(devParName)
         if not isinstance(pvName, str):
             msg = f'ERROR: Second argument of subscribe() should be a string, not {type(pvName)}'
             raise SystemError(msg)
-        pv = self._get_pv(pvName)
+        pv = Access._get_pv(pvName)
         subscription = pv.subscribe(data_type='time')
-        self.PVCache[pvName][PVC_CB] = callback
+        Access._PVCache[pvName][PVC_CB] = callback
         #printd('>add_callback')
-        subscription.add_callback(self._callback)
-        self.subscriptions.append(subscription)
+        subscription.add_callback(Access._callback)
+        Access._Subscriptions.append(subscription)
     
     def unsubscribe(self):
-        for subscription in self.subscriptions:
+        for subscription in Access._Subscriptions:
             #print(f'>epicsAccess clear subs: {subscription}')
-            self.subscriptions.clear()
-        self.subscriptions = []
+            Access._Subscriptions.clear()
+        Access._Subscriptions = []
     

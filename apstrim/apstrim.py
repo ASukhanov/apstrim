@@ -6,8 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '3.0.0 2023-09-24'
-#TODO: Check if all PVs are alive before logging started
+__version__ = '3.1.0 2024-10-21' #Check if PVs are alive before logging started
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -174,12 +173,16 @@ class apstrim():
         #for pname in self.par2Index.keys():
         for pname in self.par2Index:
             devPar = tuple(pname.rsplit(':',1))
-            _printd(f'Subscribing: {devPar}')
+            # check if PV is alive
             try:
+                r = self.publisher.get(devPar)
+                if isinstance(r,str):
+                    raise IOError(r)
                 self.publisher.subscribe(self._delivered, devPar)
-            except:# Exception as e:
-                _printe(f'Could not subscribe  for {pname}')#: {e}')
+            except Exception as e:
+                _printe(f'Could not subscribe for {pname}: {e}')
                 continue
+            _printi(f'Subscribed: {devPar}')
 
         self.indexSection = encoderDump({'index':self.par2Index})
 
@@ -238,7 +241,8 @@ class apstrim():
         """Callback, specified in the subscribe() request. 
         Called when the requested data have been changed.
         args is a map of delivered objects."""
-        #_printd(f'delivered: {args}')
+        if apstrim.Verbosity > 0:
+            _printd(f'delivered: {args}')
         #self.timestampedMap = {}
         with self.lock:
           for devPar,props in args[0].items():
