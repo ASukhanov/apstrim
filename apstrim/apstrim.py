@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '3.1.0 2024-10-21' #Check if PVs are alive before logging started
+__version__ = '3.2.0 2024-11-13' # handling flexible-length arrays by padding them to max size
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -39,20 +39,23 @@ MAXI32 = int(256**4/2) - 1
 SPTime = 0
 SPVal = 1
 #````````````````````````````Helper functions`````````````````````````````````
-def _printTime(): return time.strftime("%m%d:%H%M%S")
-def _printi(msg): print(f'INFO_AS@{_printTime()}: {msg}')
-def _printw(msg): print(f'WARN_AS@{_printTime()}: {msg}')
-def _printe(msg): print(f'ERROR_AS@{_printTime()}: {msg}')
-def _printd(msg):
+def printTime(): return time.strftime("%m%d:%H%M%S")
+def printi(msg): print(f'INFO_AS@{printTime()}: {msg}')
+def printw(msg): print(f'WARN_AS@{printTime()}: {msg}')
+def printe(msg): print(f'ERROR_AS@{printTime()}: {msg}')
+def printv(msg):
     if apstrim.Verbosity > 0:
-        print(f'DBG_AS: {msg}')
+        print(f'DBG_AS1: {msg}')
+def printvv(msg):
+    if apstrim.Verbosity > 1:
+        print(f'DBG_AS2: {msg}')
 
-def _croppedText(txt, limit=200):
+def croppedText(txt, limit=200):
     if len(txt) > limit:
         txt = txt[:limit]+'...'
     return txt
 
-def _packnp(data, use_single_float=True):
+def packnp(key, data, use_single_float=True):
     """ Pack data for fast extraction. If data can be converted to numpy
     arrays, then it will be returned as
     {'dtype':dtype, 'shape':shape, 'value':nparray.tobytes()},
@@ -69,11 +72,23 @@ def _packnp(data, use_single_float=True):
         #print('Empty list, no need to pack')
         return None
     atype = type(data[0])
-    #print( _croppedText(f'packing {l1} of {atype}: {data}'))
+    try:    l2 = [len(i) for i in data]
+    except: l2 = [1]
+
+    raggedArray = l2.count(l2[0])!=len(l2)
+    if raggedArray:
+        l2max = max(l2)
+        printi(f'padding ragged array_{key} to {l2max}, smallest was {min(l2)}')
+        #print(f'data: {data}')
+        data = [list(a) + [0.]*(l2max - len(a)) for a in data]
+        l2 = [len(i) for i in data]
+        #print(f'padded: {l2}')
+    
+    if apstrim.Verbosity>0: printv(croppedText(f'packing{key}, {l1} of {atype}{l2}: {data}'))
     try:
         npdata = np.array(data)
     except Exception as e:
-        _printe(f'In _packnp: {e}')
+        printe(f'In packnp: {e}')
         sys.exit()
         return data
     #print(f'npdata shape: {npdata.shape} of {npdata.dtype}')
@@ -130,7 +145,7 @@ class apstrim():
     def __init__(self, publisher, devPars:list, sectionInterval=60.
 #    , compress=False, quiet=False, use_single_float=True, dirSize=10240):
     , compress=False, quiet=False, dirSize=10240):
-        _printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
+        printi(f'apstrim  {__version__}, sectionInterval {sectionInterval}')
         print(f'v: {self.Verbosity}')
         signal.signal(signal.SIGINT, _safeExit)
         signal.signal(signal.SIGTERM, _safeExit)
@@ -158,13 +173,13 @@ class apstrim():
         else:
             self.compress = None
             abstract['compression'] = 'None'
-        _printi(f'Abstract section: {self.abstractSection}')
+        printi(f'Abstract section: {self.abstractSection}')
         #self.par2Index = {p:i for i,p in enumerate(self.devPars)}
         self.par2Index = [p for p in self.devPars]
         if len(self.par2Index) == 0:
-            _printe(f'Could not build the list of parameters')
+            printe(f'Could not build the list of parameters')
             sys.exit()
-        _printi(f'parameters: {self.par2Index}')
+        printi(f'parameters: {self.par2Index}')
 
         # a section has to be created before subscription
         self._create_logSection()
@@ -172,6 +187,8 @@ class apstrim():
         # subscribe to parameters
         #for pname in self.par2Index.keys():
         for pname in self.par2Index:
+            if apstrim.EventExit.is_set():
+                sys.exit(1)
             devPar = tuple(pname.rsplit(':',1))
             # check if PV is alive
             try:
@@ -180,9 +197,9 @@ class apstrim():
                     raise IOError(r)
                 self.publisher.subscribe(self._delivered, devPar)
             except Exception as e:
-                _printe(f'Could not subscribe for {pname}: {e}')
+                printe(f'Could not subscribe for {pname}: {e}')
                 continue
-            _printi(f'Subscribed: {devPar}')
+            printi(f'Subscribed: {devPar}')
 
         self.indexSection = encoderDump({'index':self.par2Index})
 
@@ -203,7 +220,7 @@ class apstrim():
             except:    fname,ext = fileName,''
             otherName = fname + suffix + '.' + ext
             os.rename(fileName, otherName)
-            _printw(f'Existing file {fileName} have been renamed to {otherName}')
+            printw(f'Existing file {fileName} have been renamed to {otherName}')
         except Exception as e:
             pass
 
@@ -217,23 +234,23 @@ class apstrim():
         self.logbook.seek(self.dirSize)
 
         # write the sections Abstract and Index
-        _printd(f'write Abstract@{self.logbook.tell()}')
+        printv(f'write Abstract@{self.logbook.tell()}')
         self.logbook.write(encoderDump(self.abstractSection))
-        _printd(f'write Index@{self.logbook.tell()}')
+        printv(f'write Index@{self.logbook.tell()}')
         self.logbook.write(self.indexSection)
         savedPos = self.logbook.tell()
 
         self._create_logSection()
 
-        #_printi('starting serialization  thread')
+        #printi('starting serialization  thread')
         myThread = threading.Thread(target=self._serialize_sections)
         myThread.start()
 
-        _printi(f'Logbook file: {fileName} created')
+        printi(f'Logbook file: {fileName} created')
 
     def stop(self):
         """Stop the streaming."""
-        _printd('>stop()')
+        printv('>stop()')
         self._eventStop.set()
         #self.logbook.close()
 
@@ -242,11 +259,11 @@ class apstrim():
         Called when the requested data have been changed.
         args is a map of delivered objects."""
         if apstrim.Verbosity > 0:
-            _printd(f'delivered: {args}')
+            printvv(f'delivered: {args}')
         #self.timestampedMap = {}
         with self.lock:
           for devPar,props in args[0].items():
-            #print( _croppedText(f'devPar: {devPar,props}'))
+            #print(croppedText(f'devPar: {devPar,props}'))
             try:
                 if isinstance(devPar, tuple):
                     # EPICS and ADO packing
@@ -260,7 +277,7 @@ class apstrim():
                         timestamp = int(timestamp/Nano)
                     if timestamp < MinTimestamp:
                         # Timestamp is wrong, discard the parameter
-                        _printd(f'timestamp is wrong {timestamp, MinTimestamp}')
+                        printv(f'timestamp is wrong {timestamp, MinTimestamp}')
                         continue
                     skey = self.par2Index.index(dev+':'+par)
                     self.timestamp = int(timestamp*Nano)
@@ -272,7 +289,7 @@ class apstrim():
                     #LITE packing:
                     dev = devPar
                     pars = props
-                    ##print( _croppedText(f'pars: {pars}'))
+                    ##print(croppedText(f'pars: {pars}'))
                     for par in pars:
                         try:
                             value = pars[par]['v']
@@ -287,16 +304,16 @@ class apstrim():
                         # add to parameter list
                         self.timestamp = int(timestamp*Nano)
                         self.sectionPars[skey][SPTime].append(timestamp)
-                        #print( _croppedText(f'value: {value}'))
+                        #print(croppedText(f'value: {value}'))
                         self.sectionPars[skey][SPVal].append(value)
                 #print(f'devPar {devPar}@{timestamp,skey}:{timestamp,value}')
             except Exception as e:
-                _printw(f'exception in unpacking: {e}')
+                printw(f'exception in unpacking: {e}')
                 continue
           #try:      ts = self.timestamp
           #except:   ts = '?'
           #print(f'served timestamp: {ts}')
-        #print( _croppedText(f'section: {self.section}'))
+        #print(croppedText(f'section: {self.section}'))
         
     def _create_logSection(self):
         with self.lock:
@@ -316,8 +333,8 @@ class apstrim():
         statistics = [0, 0, 0, 0, 0.]#
         NSections, NParLists, BytesRaw, BytesFinal, LogTime = 0,1,2,3,4
         maxSections = self.howLong//self.sectionInterval
-        _printd(f'serialize_sections started.')
-        try:
+        printv(f'serialize_sections started.')
+        if True:#try:
           while statistics[NSections] <= maxSections\
               and not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
@@ -333,14 +350,14 @@ class apstrim():
                 if len(packed) < self.dirSize:
                     self.packedContents = packed
                 else:
-                    _printw((f'The contents size is too small for'
+                    printw((f'The contents size is too small for'
                     f' {len(packed)} bytes. Half of the entries will be'
                     ' removed to allow for more entries.}'))
                     self.contents_downsampling_factor *= 2
                     downsampled_contents = dict(list(self.dataContents.items())\
                       [::self.contents_downsampling_factor])
                     self.contentsSection['data'] = downsampled_contents
-                    _printd(f'downsampled contentsSection:{self.contentsSection}')
+                    printv(f'downsampled contentsSection:{self.contentsSection}')
                     self.packedContents = encoderDump(self.contentsSection)
 
             # Update Directory section on the file.
@@ -350,11 +367,11 @@ class apstrim():
             self.logbook.seek(currentPos)
 
             statistics[NSections] += 1
-            _printd(f'section{statistics[NSections]} {self.section["tstart"]} is ready for writing to logbook @ {self.logbook.tell()}')
+            printv(f'section{statistics[NSections]} {self.section["tstart"]} is ready for writing to logbook @ {self.logbook.tell()}')
             try:
                 self.section['tend'] = self.timestamp
             except:
-                _printw(f'No data recorded in section {statistics[NSections]}')
+                printw(f'No data recorded in section {statistics[NSections]}')
                 #sys.exit()
                 continue
 
@@ -363,18 +380,18 @@ class apstrim():
             with self.lock:
                 for key,val in self.sectionPars.items():
                     statistics[NParLists] += 1
-                    #print( _croppedText(f'sectItem:{key,val}'))
-                    sptimes = _packnp(val[SPTime])
+                    #print(croppedText(f'sectItem:{key,val}'))
+                    sptimes = packnp(key, val[SPTime])
                     if sptimes is None:
                         continue
-                    spvals = _packnp(val[SPVal])
+                    spvals = packnp(key, val[SPVal])
                     npPacked[key] = (sptimes, spvals)
-            if apstrim.Verbosity >= 1:
-                print( _croppedText(f"npPacked: {self.section['tstart'], npPacked.keys()}"))
+            if apstrim.Verbosity >= 2:
+                printvv(croppedText(f"npPacked: {self.section['tstart'], npPacked.keys()}"))
                 for i,kValues in enumerate(npPacked.items()):
-                    print( _croppedText(f'Index{i}: {kValues[0]}'))
+                    printvv(croppedText(f'Index{i}: {kValues[0]}'))
                     for ii,value in enumerate(kValues[1]):
-                        print( _croppedText(f'kValue{ii}[{len(value["bytes"])}]: {value}'))
+                        printvv(croppedText(f'kValue{ii}[{len(value["bytes"])}]: {value}'))
 
             # msgpack
             toPack = {'tstart':self.section['tstart']
@@ -406,8 +423,8 @@ class apstrim():
                     f' {statistics[NParLists]} parLists,'
                     f' {statistics[BytesFinal]/1000.} KBytes,'
                     f' {round(statistics[BytesRaw]/statistics[LogTime]/1e6,1)} MB/s')                    
-        except Exception as e:
-            print(f'ERROR: Exception in serialize_sections: {e}')
+        else:#except Exception as e:
+            printe(f'Exception in serialize_sections: {e}')
 
         # logging is finished
         # rewrite the contentsSection
