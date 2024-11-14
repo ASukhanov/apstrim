@@ -1,5 +1,5 @@
 """Plot data from the aplog-generated files."""
-__version__ = 'v3.0.0 2023-09-24'#
+__version__ = 'v3.2.0 2024-11-12'#
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: Dataset option does not work
 
@@ -16,9 +16,13 @@ pg.setConfigOption('foreground', 'k')
 from apstrim.scan import APScan, __version__ as scanVersion
 
 Nano = 1e-9
+Cursors = False
 def printv(msg):
     if APScan.Verbosity >= 1:
-        print(f'DBG_view: {msg}')
+        print(f'DBG_view1: {msg}')
+def printvv(msg):
+    if APScan.Verbosity >= 2 :
+        print(f'DBG_view2: {msg}')
 def _croppedText(txt, limit=400):
     if len(txt) > limit:
         txt = txt[:limit]+'...'
@@ -38,8 +42,8 @@ parser.add_argument('-s', '--startTime', help=
 """Start time, fomat: YYMMDD_HHMMSS, e.g. 210720_001725""")
 parser.add_argument('-t', '--timeInterval', type=float, default=9e9, help="""
 Time span in seconds.""")
-parser.add_argument('-v', '--verbose', nargs='*', help=\
-'Show more log messages, (-vv: show even more)')
+parser.add_argument('-v', '--verbose', action='count', default=0, help=\
+  'Show more log messages (-vv: show even more).')
 parser.add_argument('files', nargs='*', default=['apstrim.aps'], help=\
 'Input files, Unix style pathname pattern expansion allowed e.g: *.aps')
 pargs = parser.parse_args()
@@ -47,11 +51,12 @@ pargs = parser.parse_args()
 
 #if pargs.plot is not None:
 #    pargs.plot = 'fast' if len(pargs.plot) == 0 else 'symbols'
-
-if pargs.verbose is not None:
-    APScan.Verbosity = 1 if len(pargs.verbose) == 0\
-    else len(pargs.verbose[0]) + 1
+APScan.Verbosity = pargs.verbose
 #print(f'Verbosity: {APScan.Verbosity}')
+
+#``````````````arrange keyboard interrupt to kill the program from terminal.
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 allExtracted = []
 
@@ -249,7 +254,8 @@ class CustomViewBox(pg.ViewBox):
         # IMPORTANT: menu creation is deferred because it is expensive 
         # and often the user will never see the menu anyway.
         self.menu = None
-        self.cursors = set()
+        if Cursors:
+            self.cursors = set()
            
     #v32#def mouseClickEvent(self, ev) removed, due to blank exports
 
@@ -279,10 +285,11 @@ class CustomViewBox(pg.ViewBox):
         setDatasets = self.menu.addAction('Datasets &Options')
         setDatasets.triggered.connect(self.changed_datasetOptions)
 
-        cursorMenu = self.menu.addMenu('Add Cursor')
-        for cursor in ['Vertical','Horizontal']:
-            action = cursorMenu.addAction(cursor)
-            action.triggered.connect(partial(self.cursorAction,cursor))
+        if Cursors:
+            cursorMenu = self.menu.addMenu('Add Cursor')
+            for cursor in ['Vertical','Horizontal']:
+                action = cursorMenu.addAction(cursor)
+                action.triggered.connect(partial(self.cursorAction,cursor))
         
         labelX = QW.QWidgetAction(self.menu)
         self.labelXGui = QW.QLineEdit('LabelX')
@@ -503,6 +510,15 @@ for extracted in allExtracted:
     #print(_croppedText(f'times: {timestamps}'))
     nTStamps = len(timestamps)
     y = ptv['values']
+
+    # check if y is array of numbers
+    if APScan.Verbosity >= 2:   printvv(f'y: {y}')
+    if not np.issubdtype(y[0].dtype, np.number):
+        msg = f'PV[{key}] is not array of numbers dtype:{y[0].dtype}'
+        print(f'WARNING: {msg}')
+        #raise ValueError(msg)
+        y = [float(i) for i in y]
+
     #y = np.array(y)
     #No gain:print(_croppedText(f'values: {y}'))
 
@@ -542,37 +558,38 @@ for extracted in allExtracted:
         print(f'WARNING: plotting is not supported for item {key}: {e}')
 print(f'Plotting time of {nPoints} points: {round(timer()-ts,3)} s')
 
-cursors = set()
-def add_cursor(direction):
-    global cursor
-    angle = {'Vertical':90, 'Horizontal':0}[direction]
-    vid = {'Vertical':0, 'Horizontal':1}[direction]
-    viewRange = plotItem.viewRange()
-    pos = (viewRange[vid][1] + viewRange[vid][0])/2.
-    pen = pg.mkPen(color='y', width=1, style=pg.QtCore.Qt.DotLine)
-    cursor = pg.InfiniteLine(pos=pos, pen=pen, movable=True, angle=angle
-    , label=str(round(pos,3)))
-    cursor.sigPositionChangeFinished.connect(\
-    (partial(cursorPositionChanged,cursor)))
-    cursors.add(cursor)
-    plotItem.addItem(cursor)
-    cursorPositionChanged(cursor)
+if Cursors:
+    cursors = set()
+    def add_cursor(direction):
+        global cursor
+        angle = {'Vertical':90, 'Horizontal':0}[direction]
+        vid = {'Vertical':0, 'Horizontal':1}[direction]
+        viewRange = plotItem.viewRange()
+        pos = (viewRange[vid][1] + viewRange[vid][0])/2.
+        pen = pg.mkPen(color='y', width=1, style=pg.QtCore.Qt.DotLine)
+        cursor = pg.InfiniteLine(pos=pos, pen=pen, movable=True, angle=angle
+        , label=str(round(pos,3)))
+        cursor.sigPositionChangeFinished.connect(\
+        (partial(cursorPositionChanged,cursor)))
+        cursors.add(cursor)
+        plotItem.addItem(cursor)
+        cursorPositionChanged(cursor)
 
-def cursorPositionChanged(cursor):
-    pos = cursor.value()
-    horizontal = cursor.angle == 0.
-    viewRange = plotItem.viewRange()[horizontal]
-    if pos > viewRange[1]:
-        plotItem.removeItem(cursor)
-        cursors.remove(cursor)
-    else:
-        if horizontal:
-            text = str(round(pos,3))
+    def cursorPositionChanged(cursor):
+        pos = cursor.value()
+        horizontal = cursor.angle == 0.
+        viewRange = plotItem.viewRange()[horizontal]
+        if pos > viewRange[1]:
+            plotItem.removeItem(cursor)
+            cursors.remove(cursor)
         else:
-            text = time.strftime('%H:%M:%S', time.localtime(pos))
-        cursor.label.setText(text)
+            if horizontal:
+                text = str(round(pos,3))
+            else:
+                text = time.strftime('%H:%M:%S', time.localtime(pos))
+            cursor.label.setText(text)
 
-add_cursor('Vertical')
-add_cursor('Horizontal')
+    add_cursor('Vertical')
+    add_cursor('Horizontal')
 
 qApp.exec_()

@@ -28,8 +28,8 @@ def main():
     'How long (seconds) to take data.')
     parser.add_argument('-q', '--quiet', action='store_true', help=\
     'Quiet: dont print section progress')
-    parser.add_argument('-v', '--verbose', action='store_true', help=\
-    'Show more log messages')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help=\
+    'Show more log messages (-vv: show even more).')
     parser.add_argument('pvNames', nargs='*', help=\
     'Data Object names, one item per device parameters are comma-separated: dev1:par1,par2 dev2:par1,par2') 
     pargs = parser.parse_args()

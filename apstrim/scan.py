@@ -7,7 +7,7 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-__version__ = 'v2.0.5 2021-08-24'#
+__version__ = 'v3.2.0 2024-11-13'#
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -16,10 +16,10 @@ TimeFormat_out = '%y%m%d_%H%M%S'
 #````````````````````````````Helper functions`````````````````````````````````
 def _printv(msg):
     if APScan.Verbosity >= 1:
-        print(f'DBG_APSV: {msg}')
+        print(f'DBG_APS1: {msg}')
 def _printvv(msg):
     if APScan.Verbosity >= 2 :
-        print(f'DBG_APSVV: {msg}')
+        print(f'DBG_APS2: {msg}')
 
 def _croppedText(txt, limit=200):
     if len(txt) > limit:
@@ -49,11 +49,13 @@ def _unpacknp(data):
     if len(data) != 2:# expect two arrays: times and values
         return data
     #print( _croppedText(f'unp: {data}'))
+    #print(f'unp: {data}')
     unpacked = []
     for i,item in enumerate(data):
         try:
             dtype = item['dtype']
             shape = item['shape']
+            #print(f'unp[{len(item["bytes"])}]: dtype: {dtype,shape}')
             buf = item['bytes']
             arr = np.frombuffer(buf, dtype=dtype).reshape(shape)
             if i == 0:
@@ -130,8 +132,12 @@ class APScan():
 
     def get_headers(self):
         """Returns dict of header sections: Directory, Abstract, Index"""
-        return {'Directory':self.directory, 'Abstract':self.abstract
-        , 'Index':self.key2par}
+        try:
+            r = {'Directory':self.directory, 'Abstract':self.abstract, 'Index':self.key2par}
+        except AttributeError:
+            print('ERROR: Abstract section have not been created yet, try once more.')
+            sys.exit()
+        return r
 
     def extract_objects(self, span=0., items=[], startTime=None
         , bufSize=128*1024*1024):
