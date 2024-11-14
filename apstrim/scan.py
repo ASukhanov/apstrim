@@ -7,7 +7,7 @@ import bisect
 import numpy as np
 from io import BytesIO
 import msgpack
-__version__ = 'v3.2.0 2024-11-13'#
+__version__ = 'v3.2.0 2024-11-14'#
 
 #````````````````````````````Globals``````````````````````````````````````````
 Nano = 0.000000001
@@ -260,9 +260,8 @@ class APScan():
             extractionTStart = timer()
             nSections += 1
             # data sections
-            _printv(f'Data Section: {nSections+startSection_idx}')
             if nSections%60 == 0:
-                dt = time.time() - extractionTime
+                dt = timer() - timerTotal
                 _printv((f'Data sections: {nSections}'
                 f', elapsed time: {round(dt,4)}'))#, paragraphs/s: {nParagraphs//dt}'))
             try:# handle compressed data
@@ -332,7 +331,7 @@ class APScan():
 
         if APScan.Verbosity >= 1:
             print(f'SectionTime: {[round(i/nSections,6) for i in sectionTime]}')
-        print(f'Deserialized from {self.logbookName}: {nSections} sections')
+        print(f'Deserialized {round(toRead/1e6,1)} MB, {nSections} sections from {self.logbookName}')
         print(f'Sets/Parameter: {parameterStatistics}')
         ttime = timer()-timerTotal
         mbps = (f' {round(toRead/1e6/extractionTime,1)} MB/s'

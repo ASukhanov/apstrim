@@ -1,7 +1,6 @@
 """Plot data from the aplog-generated files."""
-__version__ = 'v3.2.0 2024-11-12'#
+__version__ = 'v3.2.0 2024-11-14'# Cleanup, removed non-functional Dataset and MapOfDatasets
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
-#TODO: Dataset option does not work
 
 import sys, time, argparse, os
 from timeit import default_timer as timer
@@ -110,134 +109,6 @@ if not pargs.plot:
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-class Dataset():
-    ''' dataset storage, keeps everything what is necessary to plot the curve.
-    '''
-    def __init__(self,name,paramAndCount):
-        self.name = name
-        self.adoPars = paramAndCount # list of max 2 of (adoPar,count)
-        self.plotItem = None # plotting object PlotCurveItem
-        self.pen = None # current pen
-        self.width = 1 # pen width
-        self.timestamp = 0 # latest timestamp
-        self.timestampReported = 0 # time of the last title update
-        self.plotWidget = None
-        
-        # plotting options, described in 
-        # http://www.pyqtgraph.org/documentation/graphicsItems/plotdataitem.html#pyqtgraph.PlotDataItem
-        self.connect = None
-        self.shadowPen = None
-        self.fillLevel = None
-        self.fillBrush = None
-        self.stepMode = None
-        self.symbol = None
-        self.symbolPen = None
-        self.symbolBrush = None
-        self.symbolSize = None
-        self.pxMode = None
-
-        # ``````````````````` Add plotItem ``````````````````````````````````````
-        dock = name.split('.')[0]
-        printv('plotItem for: '+str([s for s in self.adoPars])+', name:'+str(dock))
-        ScrolLength = 10
-        self.data = [np.empty(ScrolLength),np.empty(ScrolLength)]# [X,U] data storage
-        self.dataPtr = 0
-        count = self.adoPars[0][1] #
-        print(f'adoPars,count: {self.adoPars,count}')
-
-        # create plotItem with proper pen
-        lineNumber = 0
-        try: lineNumber = int(name.split('.')[1])
-        except: pass
-        isCorrelationPlot = len(self.adoPars) == 2
-        self.pen = pg.mkPen(lineNumber)                
-        if self.adoPars[0][0] == '':
-            printv('no dataset - no plotItem')
-        else:
-            self.plotItem = pg.PlotDataItem(name=name, pen=self.pen)
-            #self.plotItem = pg.PlotCurveItem(name=name, pen=self.pen)
-        
-        # assign the plotwidget if it exist, if not, create new dock and widget
-        if dock in gMapOfPlotWidgets:
-            self.plotWidget = gMapOfPlotWidgets[dock]
-        else:
-            viewBox = CustomViewBox(name=dock)             
-            viewBox.setMouseMode(viewBox.RectMode)
-            printv('adding plotwidget:'+str(dock))
-            #title = self.adoPars[0][0]
-            title = None
-            if count == 1 and not isCorrelationPlot:
-                self.plotWidget = pg.PlotWidget(title=title, viewBox=viewBox,
-                  axisItems={'bottom':DateAxis(orientation='bottom')})
-            else: 
-                self.plotWidget = pg.PlotWidget(title=title, viewBox=viewBox)
-            #self.plotWidget.showGrid(True,True)
-            gMapOfPlotWidgets[dock] = self.plotWidget
-            gMapOfDocks[dock].addWidget(self.plotWidget)
-            if isCorrelationPlot:                        
-                self.plotWidget.setLabel('bottom',self.pvNames[1][0])
-            elif count == 1:
-                self.plotWidget.setLabel('bottom','time', units='date', unitPrefix='')
-            else:
-                self.plotWidget.setLabel('bottom',gScaleUnits[X][Units])
-
-        rangeMap = {X: (pargs.xrange, self.plotWidget.setXRange),
-                    Y: (pargs.yrange, self.plotWidget.setYRange)}
-        for axis,v in rangeMap.items():
-            r,func = v
-            if r is None:
-                continue
-            r = [float(i) for i in v[0].split(':')]
-            func(*r)
-
-        if self.plotItem: 
-            self.plotWidget.addItem(self.plotItem)
-        self.timestamp = 0.
-    
-    def remove(name):
-        printv('MapOfDatasets.remove '+name)
-        dataset = MapOfDatasets.dtsDict[name]
-        dataset.plotWidget.removeItem(dataset.plotItem)
-        del MapOfDatasets.dtsDict[dataset.name]
-
-class MapOfDatasets():
-    '''Global dictionary of Datasets, provides safe methods to add and remove 
-    the datasets '''
-    dtsDict = {}
-    
-    def add(name:str, pvNames:str):
-        '''add new datasets, the pvNames is the space delimited string of items.
-        An item is name of the PV or comma-separated string of sevral PVs
-        (for correlation plots)'''
-        if name in MapOfDatasets.dtsDict:
-            printv('Need to remove '+name)
-            MapOfDatasets.remove(name)
-        printv('MapOfDatasets.add '+str((name, pvNames)))
-        for i, token in enumerate(pvNames.split()):
-            dname = f'{name}.{i}'
-            pnameAndCount = [];
-            alist = token.split(',')
-            alist = alist[:2] # we cannot handle more than 2 curves in correlation plot
-            if len(alist) == 0:
-                MapOfDatasets.dtsDict[dname] = Dataset(dname,[('',0)])
-            else:
-                alist.reverse()
-                for pvName in alist:
-                    newName = pvName
-                    try:    count = len(val)
-                    except: count = 1
-                    pnameAndCount.append((newName,count))
-                #printv('adding '+str(pnameAndCount)+' to datasets['+dname+']')
-                MapOfDatasets.dtsDict[dname] = Dataset(dname,pnameAndCount)
-        printv(f'MapOfDatasets: {MapOfDatasets}')
-        return 0
-    
-    def remove(name):
-        printv('MapOfDatasets.remove '+name)
-        dataset = MapOfDatasets.dtsDict[name]
-        dataset.plotWidget.removeItem(dataset.plotItem)
-        del MapOfDatasets.dtsDict[dataset.name]
-
 class CustomViewBox(pg.ViewBox):
     ''' defines actions, activated on the right mouse click in the dock
     '''
@@ -276,14 +147,6 @@ class CustomViewBox(pg.ViewBox):
         printv('getContextMenus for '+str(self.dockName))
         self.menu = ViewBoxMenu(self)
         self.menu.setTitle(str(self.dockName)+ " options..")
-
-        # reset zoom
-        #resetzoom = self.menu.addAction("&Reset Zoom")
-        #resetzoom.triggered.connect(lambda: self.autoRange())
-
-        # Datasets options dialog
-        setDatasets = self.menu.addAction('Datasets &Options')
-        setDatasets.triggered.connect(self.changed_datasetOptions)
 
         if Cursors:
             cursorMenu = self.menu.addMenu('Add Cursor')
@@ -347,97 +210,6 @@ class CustomViewBox(pg.ViewBox):
             self.cursors.remove(cursor)
         else:
             cursor.label.setText(str(round(pos,3)))
-
-    def changed_datasetOptions(self):
-        '''Dialog Plotting Options'''
-        dlg = QW.QDialog()
-        dlg.setWindowTitle("Dataset plotting config")
-        dlg.setWindowModality(QtCore.Qt.ApplicationModal)
-        dlgSize = 500,200
-        dlg.setMinimumSize(*dlgSize)
-        rowCount,columnCount = 0,6
-        tbl = QW.QTableWidget(rowCount, columnCount, dlg)
-        tbl.setHorizontalHeaderLabels(['Dataset','Color','Width','Symbol','Size','Color'])
-        for column,width in ((1,30),(3,50),(5,30)): # change column widths
-            tbl.setColumnWidth(column, width)
-        tbl.setShowGrid(False)
-        tbl.setSizeAdjustPolicy(
-            QW.QAbstractScrollArea.AdjustToContents)
-        tbl.resize(*dlgSize)
-
-        #listOfItems = gMapOfPlotWidgets[self.dockName].getPlotItem().listDataItems()
-        for row,curveName in enumerate(curves):
-            printv(f'row: {row}')
-            tbl.insertRow(row)
-            #curveName = dataitem.name()
-            printv(f'curveName: {curveName}')
-            #dataset = MapOfDatasets.dtsDict[curveName]
-            #adoparName = dataset.adoPars[0][0]
-            #printv(f'dataset:{adoparName}')
-            #item = QW.QTableWidgetItem(adoparName.rsplit(':',1)[1])
-            item = QW.QTableWidgetItem(curveName)
-            #DNW#item.setTextAlignment(QtCore.Qt.AlignRight)
-            tbl.setItem(row, 0, item)
-
-            # color button for line
-            colorButton = pg.ColorButton(color=MapOfDatasets.dtsDict[curveName].pen.color())
-            colorButton.setObjectName(curveName)
-            colorButton.sigColorChanging.connect(lambda x:
-              change_plotOption(str(self.sender().objectName()),color=x.color()))
-            tbl.setCellWidget(row, 1, colorButton)
-
-            # slider for changing the line width
-            widthSlider = QW.QSlider()
-            widthSlider.setObjectName(curveName)
-            widthSlider.setOrientation(QtCore.Qt.Horizontal)
-            widthSlider.setMaximum(10)
-            widthSlider.setValue(1)
-            widthSlider.valueChanged.connect(lambda x:
-              change_plotOption(str(self.sender().objectName()),width=x))
-            tbl.setCellWidget(row, 2, widthSlider)
-            
-            # symbol, selected from a comboBox
-            self.symbol = QW.QComboBox() # TODO: why self?
-            for symbol in ' ostd+x': self.symbol.addItem(symbol)
-            self.symbol.setObjectName(curveName)
-            self.symbol.currentIndexChanged.connect(self.set_symbol)
-            tbl.setCellWidget(row, 3, self.symbol)
-
-            # slider for changing the line width
-            symbolSizeSlider = QW.QSlider()
-            symbolSizeSlider.setObjectName(curveName)
-            symbolSizeSlider.setOrientation(QtCore.Qt.Horizontal)
-            symbolSizeSlider.setMaximum(10)
-            symbolSizeSlider.setValue(1)
-            symbolSizeSlider.valueChanged.connect(lambda x:
-              change_plotOption(str(self.sender().objectName()),symbolSize=x))
-            tbl.setCellWidget(row, 4, symbolSizeSlider)
-
-            # color button for symbol
-            symbolColorButton = pg.ColorButton(color=MapOfDatasets.dtsDict[curveName].pen.color())
-            symbolColorButton.setObjectName(curveName)
-            symbolColorButton.sigColorChanging.connect(lambda x:
-              change_plotOption(str(self.sender().objectName()),scolor=x.color()))
-            tbl.setCellWidget(row, 5,symbolColorButton)
-        dlg.exec_()
-
-    def set_symbol(self, x):
-        ''' Change symbol of the scatter plot. The size and color are taken
-        from the curve setting'''
-        dtsetName = str(self.sender().objectName())
-        symbol = str(self.sender().itemText(x))
-        printv('set_symbol for '+dtsetName+' to '+symbol)
-        dataset = MapOfDatasets.dtsDict[dtsetName]
-        if symbol != ' ':
-            dataset.symbol = symbol
-            if not dataset.symbolSize:
-                dataset.symbolSize = 4 # default size
-            if not dataset.symbolBrush:
-                dataset.symbolBrush = dataset.pen.color() # symbol color = line color
-        else:
-            # no symbols - remove the scatter plot
-            dataset.symbol = None
-            pass
             
     def set_label(self,side,labelGui):
         dock,label = self.dockName,str(labelGui.text())
