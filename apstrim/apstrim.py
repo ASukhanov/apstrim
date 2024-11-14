@@ -212,6 +212,7 @@ class apstrim():
         """
         self._eventStop.clear()
         self.howLong = howLong
+        fileName = os.path.expanduser(fileName)
         try:
             modificationTime = pathlib.Path(fileName).stat().st_mtime
             dt = datetime.datetime.fromtimestamp(modificationTime)

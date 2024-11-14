@@ -31,7 +31,7 @@ def main():
     parser.add_argument('-v', '--verbose', action='count', default=0, help=\
     'Show more log messages (-vv: show even more).')
     parser.add_argument('pvNames', nargs='*', help=\
-    'Data Object names, one item per device parameters are comma-separated: dev1:par1,par2 dev2:par1,par2') 
+    'Data Object names, one item per device, parameters are comma-separated: dev1:par1,par2 dev2:par1,par2') 
     pargs = parser.parse_args()
     #print(f'pargs:{pargs}')
 
