@@ -50,4 +50,4 @@ Logging finished for 2 sections, 4 parLists, 731.943 KB.
 
 from .apstrim import apstrim
 
-#__version__ = '2.0.5'
+__version__ = '4.0.0 2025-01-17'
