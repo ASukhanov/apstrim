@@ -1,5 +1,5 @@
 """Plot data from the apstim-generated files."""
-__version__ = 'v4.0.0 2025-01-17'# Major upgrade, plotting performance improved, config file supported.
+__version__ = 'v4.0.1 2025-01-22'# Interactive file selection
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
@@ -415,11 +415,13 @@ class TableWindow(QW.QWidget):
 parser = argparse.ArgumentParser(description=__doc__
     ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
     ,epilog=f'aplog scan : {scanVersion},  view: {__version__}')
-parser.add_argument('-c','--configDir',default='/operations/app_store/pvplot',
+parser.add_argument('-a','--apstrim', default='/operations/app_store/apstrim',
+  help='Directory of logbook files')
+parser.add_argument('-c','--configDir',default='/operations/app_store/apview',
   help='Configuration directory')
 parser.add_argument('-f', '--file', help=
   'Configuration file')
-parser.add_argument('-H', '--header', nargs='?', default='', choices=legalHeaders, help=\
+parser.add_argument('-H', '--header', nargs='?', default='', choices=legalHeaders,help=
 'Show all headers (-H) or selected header, plotting disabled')
 parser.add_argument('-i', '--items', help=
 ('Items to plot. Legal values: "all" or '
@@ -427,14 +429,14 @@ parser.add_argument('-i', '--items', help=
 parser.add_argument('-I', '--interactive', action='store_true', help=
 'Interactive selection of items for plotting')
 parser.add_argument('-p', '--plot', action='store_true', help=
-"""Plot data using pyqtgraph""")
+'Plot data using pyqtgraph')
 parser.add_argument('-s', '--startTime', help=
-"""Start time, fomat: YYMMDD_HHMMSS, e.g. 210720_001725""")
-parser.add_argument('-t', '--timeInterval', type=float, default=9e9, help="""
-Time span in seconds.""")
-parser.add_argument('-v', '--verbose', action='count', default=0, help=\
-  'Show more log messages (-vv: show even more).')
-parser.add_argument('files', nargs='*', default=['apstrim.aps'], help=\
+'Start time, fomat: YYMMDD_HHMMSS, e.g. 210720_001725')
+parser.add_argument('-t', '--timeInterval', type=float, default=9e9, help=
+'Time span in seconds')
+parser.add_argument('-v', '--verbose', action='count', default=0, help=
+'Show more log messages (-vv: show even more).')
+parser.add_argument('files', nargs='*', help=
 'Input files, Unix style pathname pattern expansion allowed e.g: *.aps')
 pargs = parser.parse_args()
 print(f'pargs: {pargs}')
@@ -635,10 +637,27 @@ def change_symbolSize(pvName, v):
         #if not isXRangeTooLarge(cc.plotDataItem):
         cc.plotDataItem.setSymbolSize(cc.symbolSize)
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+# Select logbooks
+if len(pargs.files) == 0:
+    def select_file_interactively(title='Select an *.aps file'):
+        directory = pargs.apstrim
+        #print(f'select_file_interactively:{directory}')
+        dialog = QW.QFileDialog()
+        ffilter = 'apstrim (*.aps)'
+        r = dialog.getOpenFileName( None, title, directory, ffilter)
+        fname = r[0]
+        return fname
+    fname = select_file_interactively()
+    if fname == '':
+        print('No logbook selected')
+        sys.exit()
+    print(f'Logbook selected: {fname}')
+    pargs.files = [fname]
 
 # Fill C.curves with all items
 header0 = APScan(pargs.files[0]).get_headers()
 items = header0['Index']
+
 def hsvToRgb(idx, maxColors, offset=2/3):
     # stepping throgh hsv color space, starting from offset (2/3 is blue).
     return list(pg.hsvColor((offset+idx/maxColors)%1.).getRgb())
