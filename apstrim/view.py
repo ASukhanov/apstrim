@@ -1,12 +1,12 @@
-"""Plot data from the apstim-generated files."""
-__version__ = 'v4.0.1 2025-01-22'# Interactive file selection
+"""Plot data from the apstrim-generated files."""
+__version__ = 'v4.0.2 2025-01-23'# Faster plotting of 1D arrays, cleanup.
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
 #TODO: Recall/Save viewing configuration to a file at /operations/app_store/apview/config
 
 import sys, time, argparse, os
-from timeit import default_timer as timer
+timer = time.perf_counter
 from importlib import import_module
 from functools import partial
 from collections import deque
@@ -57,7 +57,8 @@ class CurveProperties():
         return f'(cell:{self.cell}, dock:{self.dock}, enabled:{self.enabled}, color:{self.color}, width:{self.width}, symbol:{self.symbol}, swidth:{self.symbolSize})'
 
 #``````````````````Helper methods
-def printTime(): return time.strftime("%m%d:%H%M%S")
+def printTime():    return time.strftime("%m%d:%H%M%S")
+def printi(msg):    print((f'inf_view@{printTime()}: '+msg))
 def printv(msg):
     if APScan.Verbosity >= 1:
         print(f'DBG_view1: {msg}')
@@ -439,11 +440,9 @@ parser.add_argument('-v', '--verbose', action='count', default=0, help=
 parser.add_argument('files', nargs='*', help=
 'Input files, Unix style pathname pattern expansion allowed e.g: *.aps')
 pargs = parser.parse_args()
-print(f'pargs: {pargs}')
-#print(f'files: {pargs.files}')
+#print(f'pargs: {pargs}')
 
 APScan.Verbosity = pargs.verbose
-#print(f'Verbosity: {APScan.Verbosity}')
 
 #``````````````arrange keyboard interrupt to kill the program from terminal.
 import signal
@@ -587,6 +586,8 @@ def change_enable(pvName, state):
     cc = C.curves[pvName]
     plotWidget = C.dockList[cc.dock]['dock'].widgets[0]
     plotDataItem = C.curves[pvName].plotDataItem
+    if plotDataItem is None:
+        return
     if state == False:
         plotWidget.removeItem(plotDataItem)
     else:
@@ -636,6 +637,12 @@ def change_symbolSize(pvName, v):
     if cc.plotDataItem is not None:
         #if not isXRangeTooLarge(cc.plotDataItem):
         cc.plotDataItem.setSymbolSize(cc.symbolSize)
+
+def pathName(fileName):
+    r = fileName
+    if not '/' in r:
+        r = f'{pargs.apstrim}/{fileName}'
+    return(r)
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 # Select logbooks
 if len(pargs.files) == 0:
@@ -655,8 +662,10 @@ if len(pargs.files) == 0:
     pargs.files = [fname]
 
 # Fill C.curves with all items
-header0 = APScan(pargs.files[0]).get_headers()
+printv(f'Scanning first file in sequence: {pathName(pargs.files[0])}')
+header0 = APScan(pathName(pargs.files[0])).get_headers()
 items = header0['Index']
+printv(f'Items in first logobook: {items}')
 
 def hsvToRgb(idx, maxColors, offset=2/3):
     # stepping throgh hsv color space, starting from offset (2/3 is blue).
@@ -736,7 +745,7 @@ printv(f'dockList: {C.dockList}')
 
 # Process files headers
 for fileName in pargs.files:
-    apscan = APScan(fileName)
+    apscan = APScan(pathName(fileName))
     print(f'Processing {fileName}, size: {round(apscan.logbookSize*1e-6,3)} MB')
     headers = apscan.get_headers()
     
@@ -809,15 +818,18 @@ if len(C.dockList) > 0:
 idx = 0
 ts = timer()
 nPoints = 0
+#printi('Plotting')
 for extracted in allExtracted:
     for key,ptv in extracted.items():
+        lts = [timer()]
         par = ptv['par']
         pen = pg.mkPen(color=C.curves[par].color, width=C.curves[par].width)#, style=QtCore.Qt.DotLine)
         idx += 1
         timestamps = ptv['times']
         nTStamps = len(timestamps)
         y = ptv['values']
-
+        if len(y) == 0:
+            continue
         # check if y is array of numbers
         if APScan.Verbosity >= 2:   printvv(f'y: {y}')
         if not np.issubdtype(y[0].dtype, np.number):
@@ -825,22 +837,28 @@ for extracted in allExtracted:
             print(f'WARNING: {msg}')
             #raise ValueError(msg)
             y = [float(i) for i in y]
-
-        # expand X, take care if Y is list of lists
         x = []
         spread = 0
-        for i,tstamp in enumerate(timestamps):
-            try: ly = len(y[i])
-            except: ly = 1
-            try:	spread = (timestamps[i+1] - tstamp)/2
-            except: pass
-            x.append(np.linspace(tstamp, tstamp+spread, ly))
-        x = np.array(x).flatten()
-        y = np.array(y).flatten()
+        try: ly = len(y[0])
+        except: ly = 1
+        if ly == 1:
+            # y is 1D list
+            x = np.array(timestamps)
+        else:
+            # y is list of ndarrays. Expand X.
+            for i,tstamp in enumerate(timestamps):
+                ly = len(y[i])
+                try:    spread = (timestamps[i+1] - tstamp)/2
+                except: pass
+                x.append(np.linspace(tstamp, tstamp+spread, ly))
+            x = np.array(x).flatten()
+            y = np.array(y).flatten()
+        lts.append(timer())
         nn = len(x)
         if len(C.dockList) == 0:
             continue
-        print(f"Graph[{key}]: {par}, {nTStamps} tstamps, {nn} points")
+        lts.append(timer())
+        print(f"Graph[{key}]: {par}, {nTStamps} tstamps, {nn} points, dt={[round(i,3) for i in (lts[1]-lts[0], lts[2]-lts[1])]}")
         
         if nTStamps < 2:
             continue
