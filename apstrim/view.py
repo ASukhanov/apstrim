@@ -1,5 +1,5 @@
 """Plot data from the apstrim-generated files."""
-__version__ = 'v4.0.2 2025-01-23'# Faster plotting of 1D arrays, cleanup.
+__version__ = 'v4.0.3 2025-01-23'# handling case when Y is list of 1-element arrays. Handle setYRange if defined in config. 
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
@@ -246,7 +246,7 @@ def set_legend(dockNum:int, state:bool):
         #print(f'add legends to dock{dockNum}')
         plotWidget = C.dockList[dockNum]['dock'].widgets[0]
         listOfItems = plotWidget.getPlotItem().listDataItems()
-        l = pg.LegendItem((100,60), offset=(70,30), verSpacing=-20,
+        l = pg.LegendItem((100,60), offset=(70,30), verSpacing=-10,
             labelTextColor=TxtColor)  # args are (size, offset)
         l.setParentItem(plotWidget.graphicsItem())
         C.legends[dockNum] = l
@@ -323,6 +323,8 @@ def xRange(plotDataItem):
 def get_statistics():
     statList = []
     for pvName,cc in C.curves.items():
+        if not cc.enabled:
+            continue
         plotDataItem = cc.plotDataItem
         ileft,iright = xRange(plotDataItem)
         x,y = plotDataItem.getData()
@@ -681,6 +683,10 @@ def register_dock(dockNum:int):
     dockName = str(dockNum)
     dock = Dock(dockName, size=(500,200), hideTitle=True)
     vb = CustomViewBox(dockNum)
+    try:    vb.setYRange(C.config.YMINIMUM, C.config.YMAXIMUM)
+    except: pass
+    #Exception as e:
+    #    printw(f'in setYRange: {e}')        
     ax = {'bottom':DateAxis(orientation='bottom')}
     plotWidget = pg.PlotWidget(title=None, name=dockName, viewBox=vb, axisItems=ax)#, plotItem=plotItem)
     dock.addWidget(plotWidget)
@@ -836,14 +842,17 @@ for extracted in allExtracted:
             msg = f'PV[{key}] is not array of numbers dtype:{y[0].dtype}'
             print(f'WARNING: {msg}')
             #raise ValueError(msg)
-            y = [float(i) for i in y]
+            y = np.array([float(i) for i in y])
         x = []
         spread = 0
-        try: ly = len(y[0])
+        try:
+            ly = len(y[0])
         except: ly = 1
         if ly == 1:
             # y is 1D list
             x = np.array(timestamps)
+            if isinstance(y[0],np.ndarray):
+                y = np.array(y).flatten()
         else:
             # y is list of ndarrays. Expand X.
             for i,tstamp in enumerate(timestamps):
@@ -868,6 +877,7 @@ for extracted in allExtracted:
         #print(f'pw {cc.cell}: {plotWidget}')
         symPen,symBrush = pen.color(), pen.color()
         sym = None if nn > XRangeTooLarge else cc.symbol
+        #print(f'x,y of {par}: {len(x),type(x[0]),len(y),type(y[0])}')
         try:
             plotDataItem = pg.PlotDataItem(x, y, name=cc.cell,
                 downsample=1, autoDownsample=False, downsampleMethod='peak',#3.6s plotting time, this is default
