@@ -1,5 +1,5 @@
 """Plot data from the apstrim-generated files."""
-__version__ = 'v4.0.3 2025-01-23'# handling case when Y is list of 1-element arrays. Handle setYRange if defined in config. 
+__version__ = 'v4.0.4 2025-01-26'# fix: Cell names from config file. Detection of corrupted data
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
@@ -214,7 +214,7 @@ class CustomViewBox(pg.ViewBox):
             
     def set_label(self,side,labelGui):
         dock,label = self.dockNum,str(labelGui.text())
-        #print('Changed_label '+side+': '+str((dock,label)))
+        #print(f'Changed_label {side}: {dock,label}')
         plotWidget = C.dockList[self.dockNum]['dock'].widgets[0]
         plotWidget.setLabel(side,label, units='')
         # it might be useful to return the prompt back:
@@ -299,7 +299,7 @@ def shortcutStatistics():
     sl = get_statistics()
     try:    statWindow = C.statisticsWindow
     except:
-        header = ['Parameter','XMin','XMax','Mean','StDev','Peak2Peak']
+        header = ['Cell','Parameter','From','To','Mean','StDev','Peak2Peak']
         C.statisticsWindow = TableWindow(sl, header)
         statWindow = C.statisticsWindow
     statWindow.model.refresh_data(sl)
@@ -326,12 +326,14 @@ def get_statistics():
         if not cc.enabled:
             continue
         plotDataItem = cc.plotDataItem
+        if plotDataItem is None:
+            continue
         ileft,iright = xRange(plotDataItem)
         x,y = plotDataItem.getData()
         y = np.array(y[ileft:iright])
         numbers = ileft, iright, y.mean(), y.std(), (y.max() - y.min())
         ntxt = [f'{i:.6g}' for i in numbers]
-        statList.append([pvName, *ntxt])
+        statList.append([cc.cell, pvName, *ntxt])
     return statList
 
 class PopupHelp(QW.QWidget): 
@@ -393,11 +395,12 @@ class TableWindow(QW.QWidget):
     """
     def __init__(self, data, headers=[]):
         super().__init__()
-        self.setWindowTitle('Statistics')
+        self.setWindowTitle(f'Statistics of {pargs.files[0]}')
         layout = QW.QVBoxLayout()
         self.table = QW.QTableView()
         self.model = TableModel(data, headers)
         self.table.setModel(self.model)
+        self.table.setSizeAdjustPolicy(QW.QAbstractScrollArea.AdjustToContents)
         vh = self.table.verticalHeader()
         vh.setDefaultSectionSize(20)
         #vh.sectionResizeMode(QW.QHeaderView.Fixed)
@@ -579,6 +582,7 @@ def change_datasetOptions():
 #    print('Save clicked')
 
 def change_cell(pvName, txt):
+    #print(f'change_cell: {pvName, txt}')
     C.curves[pvName].cell = txt
 
 def change_enable(pvName, state):
@@ -722,9 +726,13 @@ else:
             maxColors = len(curveMap)
             i = 0
             for cell,pvName in curveMap.items():
-                #print(f'color {i} of {pvName}') 
+                #print(f'color {i} of {pvName}')
+                if not pvName in C.curves:
+                    printw(f'There is no item {pvName} in the logbook')
+                    continue
                 lcolor = hsvToRgb(i, maxColors)
                 printv(f'adding curve {pvName}{lcolor} as {cell} to dock {dockNum}')
+                C.curves[pvName].cell = cell
                 C.curves[pvName].dock = dockNum
                 C.curves[pvName].enabled = True
                 C.curves[pvName].color = lcolor
@@ -742,7 +750,7 @@ else:
     s = ''
     for i,pvName in enumerate(C.curves):
         if C.curves[pvName].enabled:
-            printv(f'Enabled: {C.curves[pvName].cell}')
+            printv(f'Enabled {i}: {C.curves[pvName].cell}')
             s += str(i)+','
     pargs.items = s[:-1]
     print(f'Index list of requested items from the apstrim: {pargs.items}')
@@ -838,7 +846,11 @@ for extracted in allExtracted:
             continue
         # check if y is array of numbers
         if APScan.Verbosity >= 2:   printvv(f'y: {y}')
-        if not np.issubdtype(y[0].dtype, np.number):
+        try:    y0dtype = y[0].dtype
+        except:
+            printw(f'Corrupted data {par}? y[0] is not numpy but {type(y[0])}')
+            continue
+        if not np.issubdtype(y0dtype, np.number):
             msg = f'PV[{key}] is not array of numbers dtype:{y[0].dtype}'
             print(f'WARNING: {msg}')
             #raise ValueError(msg)
@@ -855,7 +867,11 @@ for extracted in allExtracted:
                 y = np.array(y).flatten()
         else:
             # y is list of ndarrays. Expand X.
+            if len(y) != len(timestamps):
+                printw(f'Corrupted data of {par}? nPoints {len(y)} != nStamps {len(timestamps)}')
+                continue
             for i,tstamp in enumerate(timestamps):
+                #print(f'ndarray of {par}: {i,len(y)}')
                 ly = len(y[i])
                 try:    spread = (timestamps[i+1] - tstamp)/2
                 except: pass
