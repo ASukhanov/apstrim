@@ -1,6 +1,6 @@
 Description = '''Serializer of Process Variables (from EPICS infrastructure)
 or Data Objects from other infrastructures, e.g. ADO or LITE).'''
-__version__ = '3.1.0 2024-10-21'# conform to pubEPICS 3.1.0, wait for eventStop() after starting.
+__version__ = '4.1.0 2025-09-24'# --namespace PVAccess
 
 import sys, argparse
 from .apstrim  import apstrim, __version__
@@ -20,8 +20,9 @@ def main():
     #'Configuration file')
     parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
     'Logbook file for storing PVs and data objects')
-    parser.add_argument('-n', '--namespace', default='EPICS', help=\
-    'Infrastructure namespace, e.g.: EPICS, ADO or LITE')
+    parser.add_argument('-n', '--namespace', default='EPICS',
+      choices=['EPICS', 'PVAccess', 'ADO', 'LITE'], help=
+      'Infrastructure namespace')
     parser.add_argument('-t', '--sectionTime', type=float, default=60., help=\
     'Time interval of writing of sections to logbook')
     parser.add_argument('-T', '--acqTime', type=float, default=99e6, help=\
@@ -35,11 +36,13 @@ def main():
     pargs = parser.parse_args()
     #print(f'pargs:{pargs}')
 
-    s = pargs.namespace.upper()
+    s = pargs.namespace
     if s == 'LITE':
         from liteaccess import Access as publisher
     elif s == 'EPICS':
         from .pubEPICS import Access as publisher
+    elif s == 'PVAccess':
+        from . import cad_pvaccess as publisher
     else:
         print(f'ERROR: Unsupported namespace {s}')
         sys.exit(1)

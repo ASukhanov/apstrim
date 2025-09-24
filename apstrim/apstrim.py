@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '3.2.0 2024-11-13' # handling flexible-length arrays by padding them to max size
+__version__ = '4.1.0 2025-09-24' # Accept devPar tuple with one item
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -261,14 +261,17 @@ class apstrim():
         args is a map of delivered objects."""
         if apstrim.Verbosity > 0:
             printvv(f'delivered: {args}')
-        #self.timestampedMap = {}
         with self.lock:
           for devPar,props in args[0].items():
             #print(croppedText(f'devPar: {devPar,props}'))
             try:
                 if isinstance(devPar, tuple):
                     # EPICS and ADO packing
-                    dev,par = devPar
+                    if len(devPar) > 1:
+                        dev,par = devPar
+                        devpar = devPar[0]+':'+devPar[1]
+                    else:
+                        devpar = devPar[0]
                     value = props['value']
                     timestamp = props.get('timestamp')# valid in EPICS and LITE
                     if timestamp == None:# decode ADO timestamp 
@@ -280,7 +283,7 @@ class apstrim():
                         # Timestamp is wrong, discard the parameter
                         printv(f'timestamp is wrong {timestamp, MinTimestamp}')
                         continue
-                    skey = self.par2Index.index(dev+':'+par)
+                    skey = self.par2Index.index(devpar)
                     self.timestamp = int(timestamp*Nano)
                     self.sectionPars[skey][SPTime].append(timestamp)
                     self.sectionPars[skey][SPVal].append(value)
@@ -311,9 +314,6 @@ class apstrim():
             except Exception as e:
                 printw(f'exception in unpacking: {e}')
                 continue
-          #try:      ts = self.timestamp
-          #except:   ts = '?'
-          #print(f'served timestamp: {ts}')
         #print(croppedText(f'section: {self.section}'))
         
     def _create_logSection(self):

@@ -2,7 +2,7 @@
 Logger and extractor of time-series data (e.g. EPICS PVs).
 
 - Data are objects, indexed in time order.
-- Supported Control Infrastructures: EPICS, ADO, LITE. Easy extendable.
+- Supported Control Infrastructures: EPICS ChannelAccess+PVAccess, ADO, LITE. Easy extendable.
 - Wide range of data objects: strings, lists, maps, numpy arrays, custom.
 - Data objects could be inhomogeneous and have arbitrary frequency.
 - Self-describing data format, no schema required.
@@ -17,7 +17,7 @@ Logger and extractor of time-series data (e.g. EPICS PVs).
 <img src='/docs/apstrim_file_format.png' width='400'>
 
 ## Installation
-Dependencies: **msgpack, caproto, lz4framed**. 
+Dependencies: **msgpack, caproto, p4p, lz4framed**. 
 These packages will be installed using pip:
 
     pip3 install apstrim
