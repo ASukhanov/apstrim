@@ -1,5 +1,5 @@
 """Plot data from the apstrim-generated files."""
-__version__ = 'v4.0.4 2025-01-26'# fix: Cell names from config file. Detection of corrupted data
+__version__ = 'v4.2.0 2025-10-13'# minor fixes
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
@@ -674,8 +674,9 @@ items = header0['Index']
 printv(f'Items in first logobook: {items}')
 
 def hsvToRgb(idx, maxColors, offset=2/3):
-    # stepping throgh hsv color space, starting from offset (2/3 is blue).
+    # stepping through hsv color space, starting from offset (2/3 is blue).
     return list(pg.hsvColor((offset+idx/maxColors)%1.).getRgb())
+
 for i,item in enumerate(items):
     cell = item.rsplit(':',1)[1]
     lcolor = hsvToRgb(i, len(items))
@@ -799,9 +800,6 @@ for fileName in pargs.files:
     allExtracted.append(extracted)
     if APScan.Verbosity >= 2:
         printvv(_croppedText(f'allEextracted: {allExtracted}'))
-
-if pargs.header != '':
-    exit()
      
 #````````````````````````````Plot objects`````````````````````````````````````
 pg.setConfigOption('background', 'w')

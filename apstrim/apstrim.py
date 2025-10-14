@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '4.1.0 2025-09-24' # Accept devPar tuple with one item
+__version__ = '4.2.0 2025-10-13' # Support of sliced arrays
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -174,8 +174,25 @@ class apstrim():
             self.compress = None
             abstract['compression'] = 'None'
         printi(f'Abstract section: {self.abstractSection}')
-        #self.par2Index = {p:i for i,p in enumerate(self.devPars)}
-        self.par2Index = [p for p in self.devPars]
+
+        # create par2Index map
+        #self.par2Index = [p:(i,pslice) for p in enumerate(self.devPars)]
+        #self.par2Index = [p for p in self.devPars]
+        self.par2Index = {}
+        for idx,dp in enumerate(self.devPars):
+            nameRange = dp.rsplit('[')
+            _name = nameRange[0]
+            if len(nameRange) == 1:
+                pslice = None
+            else:
+                if nameRange[1][-1] != ']':
+                    printe(f'PV syntax error: {dp}')
+                    sys.exit(1)
+                pslice = [int(i) for i in nameRange[1][:-1].split(':')]
+                if len(pslice) == 1:
+                    pslice = pslice[0],pslice[0]+1
+            self.par2Index[_name]= idx,pslice
+
         if len(self.par2Index) == 0:
             printe(f'Could not build the list of parameters')
             sys.exit()
@@ -185,23 +202,35 @@ class apstrim():
         self._create_logSection()
 
         # subscribe to parameters
-        #for pname in self.par2Index.keys():
         for pname in self.par2Index:
+            idx,pslice = self.par2Index[pname]
             if apstrim.EventExit.is_set():
                 sys.exit(1)
             devPar = tuple(pname.rsplit(':',1))
             # check if PV is alive
+            printv(f'check if PV {devPar} is alive')
             try:
                 r = self.publisher.get(devPar)
                 if isinstance(r,str):
                     raise IOError(r)
+                if 'error' in r[devPar]:
+                    raise IOError(r[devPar])
                 self.publisher.subscribe(self._delivered, devPar)
             except Exception as e:
                 printe(f'Could not subscribe for {pname}: {e}')
+                sys.exit(1)
                 continue
-            printi(f'Subscribed: {devPar}')
+            printv(f'Subscribed: {devPar}')
 
-        self.indexSection = encoderDump({'index':self.par2Index})
+        # Create the Index section
+        pvlist = []
+        for  pvname,value in self.par2Index.items():
+            idx,pslice = value
+            if pslice is not None:
+                pvname = f'{pvname}[{pslice[0]}:{pslice[1]}]'
+            pvlist.append(pvname)
+        self.indexSection = encoderDump({'index':pvlist})
+        printi(f'IndexSection: {self.indexSection}')
 
     def start(self, fileName='apstrim.aps', howLong=99e6):
         """Start the streaming of the data objects to the logbook file.
@@ -283,9 +312,12 @@ class apstrim():
                         # Timestamp is wrong, discard the parameter
                         printv(f'timestamp is wrong {timestamp, MinTimestamp}')
                         continue
-                    skey = self.par2Index.index(devpar)
+                    skey,pslice = self.par2Index[devpar]
                     self.timestamp = int(timestamp*Nano)
                     self.sectionPars[skey][SPTime].append(timestamp)
+                    if pslice is not None:
+                        _slice = slice(*pslice)
+                        value = value[_slice]
                     self.sectionPars[skey][SPVal].append(value)
                 elif devPar == 'ppmuser':# ADO has extra item, skip it.
                     continue
@@ -304,7 +336,7 @@ class apstrim():
                         if timestamp < MinTimestamp:
                             # Timestamp is wrong, discard the parameter
                             continue
-                        skey = self.par2Index.index(dev+':'+par)
+                        skey,pslice = self.par2Index[dev+':'+par]
                         # add to parameter list
                         self.timestamp = int(timestamp*Nano)
                         self.sectionPars[skey][SPTime].append(timestamp)
@@ -333,9 +365,10 @@ class apstrim():
         periodic_update = time.time()
         statistics = [0, 0, 0, 0, 0.]#
         NSections, NParLists, BytesRaw, BytesFinal, LogTime = 0,1,2,3,4
-        maxSections = self.howLong//self.sectionInterval
+        maxSections = 0 if self.howLong == self.sectionInterval\
+          else self.howLong//self.sectionInterval
         printv(f'serialize_sections started.')
-        if True:#try:
+        try:
           while statistics[NSections] <= maxSections\
               and not self._eventStop.is_set():
             self._eventStop.wait(self.sectionInterval)
@@ -424,7 +457,7 @@ class apstrim():
                     f' {statistics[NParLists]} parLists,'
                     f' {statistics[BytesFinal]/1000.} KBytes,'
                     f' {round(statistics[BytesRaw]/statistics[LogTime]/1e6,1)} MB/s')                    
-        else:#except Exception as e:
+        except Exception as e:
             printe(f'Exception in serialize_sections: {e}')
 
         # logging is finished
@@ -440,8 +473,10 @@ class apstrim():
             msg += f' Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}'
         print(msg)
         self.logbook.close()
+        _safeExit()
                 
-def _safeExit(_signo, _stack_frame):
+def _safeExit(_signo=None, _stack_frame=None):
     print('safeExit')
     apstrim._eventStop.set()
     apstrim.EventExit.set()
+

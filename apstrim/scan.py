@@ -331,7 +331,7 @@ class APScan():
 
         if APScan.Verbosity >= 1:
             print(f'SectionTime: {[round(i/nSections,6) for i in sectionTime]}')
-        print(f'Deserialized {round(toRead/1e6,1)} MB, {nSections} sections from {self.logbookName}')
+        print(f'Deserialized {round(toRead/1e6,3)} MB, {nSections} sections from {self.logbookName}')
         print(f'Sets/Parameter: {parameterStatistics}')
         ttime = timer()-timerTotal
         mbps = (f' {round(toRead/1e6/extractionTime,1)} MB/s'

@@ -43,6 +43,9 @@ def main():
         from .pubEPICS import Access as publisher
     elif s == 'PVAccess':
         from . import cad_pvaccess as publisher
+    elif s == 'ADO':
+        from cad_io import adoaccess
+        publisher = adoaccess.IORequest()
     else:
         print(f'ERROR: Unsupported namespace {s}')
         sys.exit(1)
@@ -59,12 +62,14 @@ def main():
     #print(f'pvNames: {pvNames}')
 
     apstrim.Verbosity = pargs.verbose
+    if pargs.acqTime < pargs.sectionTime:
+        pargs.sectionTime = pargs.acqTime
     aps = apstrim(publisher, pvNames, pargs.sectionTime, compress=pargs.compress
     #, quiet=pargs.quiet, use_single_float=not pargs.doublePrecision)
     , quiet=pargs.quiet)
     aps.start(pargs.outfile, howLong=pargs.acqTime)
 
-    txt = f'for {round(pargs.acqTime/60., 2)} m' if pargs.acqTime<99e6 else 'endlessly'
+    txt = f'for {round(pargs.acqTime/60., 3)} minutes' if pargs.acqTime<99e6 else 'endlessly'
     print(f'Streaming started {txt}, press Ctrl/C to stop.')
     apstrim._eventStop.wait()
 
