@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '4.2.0 2025-10-13' # Support of sliced arrays
+__version__ = '4.2.1 2025-10-13' # Support of sliced arrays
 
 import sys, time, string, copy
 import os, pathlib, datetime

@@ -1,5 +1,5 @@
 """Plot data from the apstrim-generated files."""
-__version__ = 'v4.2.0 2025-10-14'# fixing names of curves of sliced arrays
+__version__ = 'v4.2.1 2025-10-14'# fixing names of curves of sliced arrays
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
