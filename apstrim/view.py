@@ -1,5 +1,5 @@
 """Plot data from the apstrim-generated files."""
-__version__ = 'v4.2.0 2025-10-13'# minor fixes
+__version__ = 'v4.2.0 2025-10-14'# fixing names of curves of sliced arrays
 #TODO: Cellname did not change on plot after changing it in dataset options
 #TODO: data acquisition stops when section is dumped to disk. Is writing really buffered?
 #TODO: interactive works only for one file
@@ -678,7 +678,12 @@ def hsvToRgb(idx, maxColors, offset=2/3):
     return list(pg.hsvColor((offset+idx/maxColors)%1.).getRgb())
 
 for i,item in enumerate(items):
-    cell = item.rsplit(':',1)[1]
+    _slice = ''
+    it = item
+    if '[' in it:
+        it,_slice = it.rsplit('[',2)
+        _slice = '['+ _slice
+    cell = it.rsplit(':',1)[1] + _slice
     lcolor = hsvToRgb(i, len(items))
     C.curves[item] = CurveProperties(cell, 0, False, lcolor, 1, None,
          DefaultSymbolSize)
