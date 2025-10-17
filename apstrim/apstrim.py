@@ -6,7 +6,7 @@
 #
 #     https://github.com/ASukhanov/apstrim/blob/main/LICENSE
 #
-__version__ = '4.2.1 2025-10-13' # Support of sliced arrays
+__version__ = '4.2.3 2025-10-17' # 1)do not safe_exit() after serialize, 2)output file name have form: prefix_yyyymmdd_hhmm.aps
 
 import sys, time, string, copy
 import os, pathlib, datetime
@@ -88,9 +88,8 @@ def packnp(key, data, use_single_float=True):
     try:
         npdata = np.array(data)
     except Exception as e:
-        printe(f'In packnp: {e}')
-        sys.exit()
-        return data
+        printw(f'In packnp of item {key}: {e}')
+        return None
     #print(f'npdata shape: {npdata.shape} of {npdata.dtype}')
     if npdata.shape == ():
         return data
@@ -230,29 +229,20 @@ class apstrim():
                 pvname = f'{pvname}[{pslice[0]}:{pslice[1]}]'
             pvlist.append(pvname)
         self.indexSection = encoderDump({'index':pvlist})
-        printi(f'IndexSection: {self.indexSection}')
+        #printi(f'IndexSection: {self.indexSection}')
 
-    def start(self, fileName='apstrim.aps', howLong=99e6):
+    def start(self, prefix='apstrim', howLong=99e6):
         """Start the streaming of the data objects to the logbook file.
-        If file is already exists then it will be renamed and
-        a new file will be open with the provided name.
-
+        prefix: the file name will have form: prefix_yyyymmdd_hhmm.aps
         **howLong**: Time interval (seconds) for data collection.
         """
         self._eventStop.clear()
         self.howLong = howLong
-        fileName = os.path.expanduser(fileName)
-        try:
-            modificationTime = pathlib.Path(fileName).stat().st_mtime
-            dt = datetime.datetime.fromtimestamp(modificationTime)
-            suffix = dt.strftime('_%Y%m%d_%H%M') 
-            try:    fname,ext = fileName.rsplit('.',1)
-            except:    fname,ext = fileName,''
-            otherName = fname + suffix + '.' + ext
-            os.rename(fileName, otherName)
-            printw(f'Existing file {fileName} have been renamed to {otherName}')
-        except Exception as e:
-            pass
+        #modificationTime = pathlib.Path(fileName).stat().st_mtime
+        #dt = datetime.datetime.fromtimestamp(modificationTime)
+        #suffix = dt.strftime('_%Y%m%d_%H%M')
+        suffix = time.strftime('_%Y%m%d_%H%M.aps')
+        fileName = os.path.expanduser(prefix+suffix)
 
         self.logbook = open(fileName, 'wb')
 
@@ -473,7 +463,6 @@ class apstrim():
             msg += f' Compression ratio:{round(statistics[BytesRaw]/statistics[BytesFinal],2)}'
         print(msg)
         self.logbook.close()
-        _safeExit()
                 
 def _safeExit(_signo=None, _stack_frame=None):
     print('safeExit')

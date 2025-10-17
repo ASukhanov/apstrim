@@ -18,8 +18,8 @@ def main():
     #'Disable conversion of float64 to float32')
     #parser.add_argument('-f', '--file', default=None, help=\
     #'Configuration file')
-    parser.add_argument('-o', '--outfile', default='apstrim.aps', help=\
-    'Logbook file for storing PVs and data objects')
+    parser.add_argument('-o', '--outfile', default='apstrim', help=\
+    'Prefix of the logbook file for storing PVs and data objects, the file name will have form: prefix_yyyymmdd_hhmm.aps')
     parser.add_argument('-n', '--namespace', default='EPICS',
       choices=['EPICS', 'PVAccess', 'ADO', 'LITE'], help=
       'Infrastructure namespace')

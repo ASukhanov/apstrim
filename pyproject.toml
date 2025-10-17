@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "apstrim"
-version = "4.2.1"
+version = "4.2.3"
 authors = [
   { name="Andrei Sukhanov", email="cyxandr@gmail.com" },
 ]
@@ -20,6 +20,7 @@ dependencies = [
     "msgpack",
     "liteAccess",
     "caproto",
+    #"p4p",
 ]
 [project.urls]
 "Homepage" = "https://github.com/ASukhanov/apstrim"
